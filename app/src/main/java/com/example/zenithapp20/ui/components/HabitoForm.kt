@@ -39,6 +39,7 @@ fun HabitoForm(
     var nombreHabito by remember { mutableStateOf(habitoAEditar?.nombre ?: "") }
     var meta by remember { mutableStateOf(habitoAEditar?.meta ?: "") }
     var categoriaSeleccionada by remember { mutableStateOf(habitoAEditar?.categoria ?: "Salud") }
+    var nombreError by remember { mutableStateOf(false) }
 
     val categoriasDisponibles = listOf("Salud", "Mente", "Productividad", "Social", "Hogar")
 
@@ -60,9 +61,16 @@ fun HabitoForm(
         // Campo Nombre
         CustomTextField(
             value = nombreHabito,
-            onValueChange = { nombreHabito = it },
+            onValueChange = {
+                nombreHabito = it
+                nombreError = false
+            },
             label = "Nombre del Hábito (ej: Meditar)"
         )
+        if (nombreError) {
+            Text("El nombre es obligatorio", color = Color.Red, fontSize = 11.sp)
+        }
+
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -111,6 +119,7 @@ fun HabitoForm(
         Button(
             onClick = {
                 if (nombreHabito.isNotEmpty()) {
+                    nombreError = true
                     // LÓGICA DE PERSISTENCIA:
                     val habitoFinal = if (habitoAEditar != null) {
                         // Mantenemos ID y Checks, solo cambiamos datos del form
@@ -143,7 +152,7 @@ fun HabitoForm(
                 .height(56.dp)
                 .border(1.dp, Color.White.copy(0.1f), RoundedCornerShape(16.dp)),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color.White.copy(alpha = 0.05f)
+                containerColor = Color(0xFF00C853)
             ),
             shape = RoundedCornerShape(16.dp)
         ) {

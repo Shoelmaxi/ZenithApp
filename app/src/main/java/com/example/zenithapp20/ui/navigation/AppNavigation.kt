@@ -1,4 +1,4 @@
-package com.example.zenithapp20.ui
+package com.example.zenithapp20.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -8,11 +8,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.zenithapp20.data.database.AppDatabase
-import com.example.zenithapp20.ui.navigation.AppViewModelFactory
 import com.example.zenithapp20.ui.screen.RimuFinanceScreen
 import com.example.zenithapp20.ui.screen.RimuGymScreen
-import com.example.zenithapp20.ui.screens.RimuHabitsStatsScreen
-import com.example.zenithapp20.ui.screens.RimuScreen
+import com.example.zenithapp20.ui.screen.RimuHabitsStatsScreen
+import com.example.zenithapp20.ui.screen.RimuScreen
 import com.example.zenithapp20.ui.viewmodel.AgendaViewModel
 import com.example.zenithapp20.ui.viewmodel.FinanzasViewModel
 import com.example.zenithapp20.ui.viewmodel.GymViewModel

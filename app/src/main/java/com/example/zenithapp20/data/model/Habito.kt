@@ -16,22 +16,29 @@ data class Habito(
 ) {
     // Room ignora automáticamente los 'val' con 'get()' personalizado,
     // así que tu lógica de racha queda intacta y segura.
-    val semanasPerfectas: Int
+    val rachaDias: Int
         get() {
             if (checks.isEmpty()) return 0
 
             val fechas = checks.map {
                 Calendar.getInstance().apply {
                     timeInMillis = it
-                    set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
                 }.timeInMillis
             }.distinct().sortedDescending()
 
             val hoy = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
             }.timeInMillis
-            val ayer = hoy - 86400000
+            val ayer = hoy - 86400000L
 
+            // Si no completó ni hoy ni ayer, racha rota
             if (!fechas.contains(hoy) && !fechas.contains(ayer)) return 0
 
             var diasSeguidos = 0
@@ -39,9 +46,9 @@ data class Habito(
             for (f in fechas) {
                 if (f == fechaEsperada) {
                     diasSeguidos++
-                    fechaEsperada -= 86400000
+                    fechaEsperada -= 86400000L
                 } else break
             }
-            return diasSeguidos / 7
+            return diasSeguidos
         }
 }

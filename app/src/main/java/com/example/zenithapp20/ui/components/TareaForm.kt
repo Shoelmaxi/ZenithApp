@@ -1,9 +1,7 @@
 package com.example.zenithapp20.ui.components
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -44,6 +42,8 @@ fun TareaForm(onSave: (TareaItem) -> Unit) {
     var nombre by remember { mutableStateOf("") }
     var desc by remember { mutableStateOf("") }
     var prioridadSelected by remember { mutableStateOf(Prioridad.BAJA) }
+    var nombreError by remember { mutableStateOf(false) }
+    var fechaError by remember { mutableStateOf(false) }
 
     val datePickerState = rememberDatePickerState()
     var showDatePicker by remember { mutableStateOf(false) }
@@ -62,6 +62,9 @@ fun TareaForm(onSave: (TareaItem) -> Unit) {
         Spacer(modifier = Modifier.height(20.dp))
 
         CustomTextField(value = nombre, onValueChange = { nombre = it }, label = "Nombre de la tarea")
+        if (nombreError) {
+            Text("El nombre es obligatorio", color = Color.Red, fontSize = 11.sp)
+        }
         CustomTextField(value = desc, onValueChange = { desc = it }, label = "Notas/Descripción")
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -83,6 +86,9 @@ fun TareaForm(onSave: (TareaItem) -> Unit) {
                 }
             ) { DatePicker(state = datePickerState) }
         }
+        if (fechaError) {
+            Text("Selecciona una fecha límite", color = Color.Red, fontSize = 11.sp)
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -90,13 +96,17 @@ fun TareaForm(onSave: (TareaItem) -> Unit) {
 
         Button(
             onClick = {
+                nombreError = nombre.isEmpty()
+                fechaError = datePickerState.selectedDateMillis == null
                 val seleccionMillis = datePickerState.selectedDateMillis
 
-                if(nombre.isNotEmpty() && seleccionMillis != null) {
+                if (!nombreError && !fechaError) {
 
                     // 1. Extraemos el día exacto que el usuario tocó en el calendario (está en UTC)
                     val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
-                        timeInMillis = seleccionMillis
+                        if (seleccionMillis != null) {
+                            timeInMillis = seleccionMillis
+                        }
                     }
 
                     // 2. Lo guardamos en un Calendar local pero forzando los mismos números de día/mes/año

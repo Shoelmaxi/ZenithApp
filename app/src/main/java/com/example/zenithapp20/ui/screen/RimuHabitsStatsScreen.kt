@@ -1,4 +1,4 @@
-package com.example.zenithapp20.ui.screens
+package com.example.zenithapp20.ui.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

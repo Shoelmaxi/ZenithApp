@@ -29,9 +29,15 @@ class AgendaViewModel(private val dao: AgendaDao) : ViewModel() {
         }
     }
 
-    fun toggleCompletado(item: AgendaItem) {
+    fun toggleCompletado(item: AgendaItem, diaActual: String) {
         viewModelScope.launch {
-            dao.updateAgendaItem(item.copy(completado = !item.completado))
+            val nuevos = item.diasCompletados.toMutableList()
+            if (nuevos.contains(diaActual)) {
+                nuevos.remove(diaActual)
+            } else {
+                nuevos.add(diaActual)
+            }
+            dao.updateAgendaItem(item.copy(diasCompletados = nuevos))
         }
     }
 

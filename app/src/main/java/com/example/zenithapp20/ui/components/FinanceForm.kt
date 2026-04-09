@@ -27,6 +27,8 @@ fun FinanceForm(onSave: (Transaccion) -> Unit) {
     var monto by remember { mutableStateOf("") }
     var categoria by remember { mutableStateOf("") }
     var tipo by remember { mutableStateOf(TipoTransaccion.EGRESO) }
+    var montoError by remember { mutableStateOf(false) }
+    var nombreError by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -71,8 +73,17 @@ fun FinanceForm(onSave: (Transaccion) -> Unit) {
         // --- CAMPO MONTO (CORREGIDO CON OUTLINEDTEXTFIELD ESTÁNDAR) ---
         OutlinedTextField(
             value = monto,
-            onValueChange = { if (it.all { char -> char.isDigit() }) monto = it },
+            onValueChange = {
+                if (it.all { char -> char.isDigit() }) {
+                    monto = it
+                    montoError = false
+                }
+            },
             label = { Text("Monto ($)", color = SecondaryText) },
+            isError = montoError,
+            supportingText = {
+                if (montoError) Text("Ingresa un monto válido", color = Color.Red)
+            },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             colors = OutlinedTextFieldDefaults.colors(
@@ -80,7 +91,8 @@ fun FinanceForm(onSave: (Transaccion) -> Unit) {
                 unfocusedBorderColor = CardBorderColor,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
-                cursorColor = Color.White
+                cursorColor = Color.White,
+                errorBorderColor = Color.Red
             ),
             shape = RoundedCornerShape(12.dp)
         )
@@ -106,7 +118,10 @@ fun FinanceForm(onSave: (Transaccion) -> Unit) {
 
         Button(
             onClick = {
-                if (nombre.isNotBlank() && monto.isNotBlank()) {
+                nombreError = nombre.isBlank()
+                montoError = monto.isBlank() || (monto.toIntOrNull() ?: 0) <= 0
+
+                if (!nombreError && !montoError) {
                     onSave(
                         Transaccion(
                             nombre = nombre,

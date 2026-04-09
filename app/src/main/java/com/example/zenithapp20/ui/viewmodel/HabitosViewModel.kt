@@ -17,32 +17,40 @@ class HabitosViewModel(private val dao: HabitosDao) : ViewModel() {
         viewModelScope.launch { dao.insertHabito(habito) }
     }
 
-    fun toggleCheckHoy(habito: Habito) {
+    fun verificarSiCompletadoEnFecha(habito: Habito, fechaMillis: Long): Boolean {
+        val inicioDia = Calendar.getInstance().apply {
+            timeInMillis = fechaMillis
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        return habito.checks.any { it >= inicioDia && it < inicioDia + 86400000 }
+    }
+
+    fun toggleCheckEnFecha(habito: Habito, fechaMillis: Long) {
         viewModelScope.launch {
-            val hoy = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0);
-                set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            val inicioDia = Calendar.getInstance().apply {
+                timeInMillis = fechaMillis
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
             }.timeInMillis
 
             val nuevosChecks = habito.checks.toMutableList()
-            // Buscamos si ya existe un check hoy (margen de 24h)
-            val checkHoy = nuevosChecks.find { it >= hoy && it < hoy + 86400000 }
+            val checkEseDia = nuevosChecks.find { it >= inicioDia && it < inicioDia + 86400000 }
 
-            if (checkHoy != null) {
-                nuevosChecks.remove(checkHoy)
+            if (checkEseDia != null) {
+                nuevosChecks.remove(checkEseDia)
             } else {
-                nuevosChecks.add(System.currentTimeMillis())
+                nuevosChecks.add(inicioDia)
             }
 
             dao.updateHabito(habito.copy(checks = nuevosChecks))
         }
     }
-
-    fun verificarSiCompletadoHoy(habito: Habito): Boolean {
-        val hoy = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0);
-            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
-        return habito.checks.any { it >= hoy && it < hoy + 86400000 }
+    fun eliminarHabito(habito: Habito) {
+        viewModelScope.launch { dao.deleteHabito(habito) }
     }
 }

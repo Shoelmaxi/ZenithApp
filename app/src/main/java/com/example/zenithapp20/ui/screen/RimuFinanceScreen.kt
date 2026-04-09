@@ -18,7 +18,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.zenithapp20.data.model.Transaccion
 import com.example.zenithapp20.ui.components.FinanceForm
 import com.example.zenithapp20.ui.components.FinanzasItem
 import com.example.zenithapp20.ui.theme.CardBorderColor
@@ -140,4 +139,7 @@ fun FinanceStat(label: String, value: Int, color: Color) {
         Text(label, color = SecondaryText, fontSize = 10.sp)
         Text("$$value", color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
+}
+fun formatCLP(monto: Int): String {
+    return "$" + "%,d".format(monto).replace(",", ".")
 }

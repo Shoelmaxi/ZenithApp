@@ -97,9 +97,9 @@ fun FilaHabitoStats(habito: Habito, timestampsSemana: List<Long>) {
             )
 
             // SI TIENE SEMANAS PERFECTAS, MOSTRAMOS EL TAG
-            if (habito.semanasPerfectas > 0) {
+            if (habito.rachaDias > 0) {
                 Spacer(modifier = Modifier.height(4.dp))
-                RachaTag(semanas = habito.semanasPerfectas)
+                RachaTag(dias = habito.rachaDias)
             }
         }
 

@@ -1,4 +1,4 @@
-package com.example.zenithapp20.ui.screens
+package com.example.zenithapp20.ui.screen
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -15,12 +15,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,6 +42,7 @@ import com.example.zenithapp20.ui.components.HabitoForm
 import androidx.compose.material.icons.filled.Payments
 
 import androidx.compose.runtime.collectAsState
+import com.example.zenithapp20.ui.components.SwipeToDeleteContainer
 import com.example.zenithapp20.ui.viewmodel.AgendaViewModel
 import com.example.zenithapp20.ui.viewmodel.TareasViewModel // Asumiendo este nombre
 import com.example.zenithapp20.ui.viewmodel.HabitosViewModel // Asumiendo este nombre
@@ -118,12 +117,15 @@ fun RimuScreen(
                     item { EmptyStateText("No hay eventos para este día") }
                 } else {
                     items(listaAgenda) { item ->
-                        SwipeToDeleteContainer(onDelete = { agendaViewModel.eliminarItem(item) }) {
+                        SwipeToDeleteContainer(
+                            mensajeConfirmacion = "Se eliminará el evento '${item.nombre}'.",
+                            onDelete = { agendaViewModel.eliminarItem(item) }
+                        ) {
                             Box(modifier = Modifier.combinedClickable(
-                                onClick = { agendaViewModel.toggleCompletado(item) },
+                                onClick = { agendaViewModel.toggleCompletado(item,diaSemanaActual) },
                                 onLongClick = { agendaAEditar = item; showAgendaSheet = true } // EDITAR
                             )) {
-                                RimuAgendaItem(item = item, isLast = false)
+                                RimuAgendaItem(item = item, isLast = false, diaActual = diaSemanaActual)
                             }
                         }
                     }
@@ -138,17 +140,21 @@ fun RimuScreen(
                 } else {
                     items(listaHabitos) { habito ->
                         // Agregamos Swipe para borrar hábitos también
-                        SwipeToDeleteContainer(onDelete = { /* Aquí podrías agregar habitosViewModel.eliminar(habito) si lo creas */ }) {
-                            Box(modifier = Modifier.combinedClickable(
-                                onClick = { habitosViewModel.toggleCheckHoy(habito) },
-                                onLongClick = { habitoAEditar = habito; showHabitoSheet = true } // EDITAR HÁBITO
-                            )) {
-                                HabitoQuickItem(
-                                    habito = habito,
-                                    isCompletadoHoy = habitosViewModel.verificarSiCompletadoHoy(habito),
-                                    onCheckClick = { habitosViewModel.toggleCheckHoy(habito) }
-                                )
-                            }
+                        SwipeToDeleteContainer(
+                            mensajeConfirmacion = "Se eliminará el hábito '${habito.nombre}' y toda su racha.",
+                            onDelete = { habitosViewModel.eliminarHabito(habito) }
+                        ) {
+                            HabitoQuickItem(
+                                habito = habito,
+                                isCompletadoHoy = habitosViewModel.verificarSiCompletadoEnFecha(
+                                    habito,
+                                    fechaSeleccionada.timeInMillis
+                                ),
+                                onCheckClick = {
+                                    habitosViewModel.toggleCheckEnFecha(habito, fechaSeleccionada.timeInMillis)
+                                },
+                                onLongClick = { habitoAEditar = habito; showHabitoSheet = true }
+                            )
                         }
                     }
                 }
@@ -161,7 +167,10 @@ fun RimuScreen(
                     item { EmptyStateText("Sin tareas pendientes") }
                 } else {
                     items(listaTareas) { tarea ->
-                        SwipeToDeleteContainer(onDelete = { tareasViewModel.eliminarTarea(tarea) }) {
+                        SwipeToDeleteContainer(
+                            mensajeConfirmacion = "Se eliminará la tarea '${tarea.nombre}'.",
+                            onDelete = { tareasViewModel.eliminarTarea(tarea) }
+                        ) {
                             Box(modifier = Modifier.combinedClickable(
                                 onClick = { tareasViewModel.toggleCompletada(tarea) },
                                 onLongClick = { tareaAEditar = tarea; showTareaSheet = true } // EDITAR
@@ -191,11 +200,15 @@ fun RimuScreen(
     }
 
     if (showAgendaSheet) {
-        ModalBottomSheet(onDismissRequest = { showAgendaSheet = false; agendaAEditar = null }, containerColor = MainCardBackground) {
+        ModalBottomSheet(
+            onDismissRequest = { showAgendaSheet = false; agendaAEditar = null },
+            containerColor = MainCardBackground
+        ) {
             AgendaForm(
-                // Aquí deberías pasar 'itemAEditar = agendaAEditar' si tu AgendaForm lo soporta
+                itemAEditar = agendaAEditar,
                 onSave = { nuevo ->
-                    val itemFinal = if (agendaAEditar != null) nuevo.copy(id = agendaAEditar!!.id) else nuevo
+                    val itemFinal = if (agendaAEditar != null)
+                        nuevo.copy(id = agendaAEditar!!.id) else nuevo
                     agendaViewModel.guardarOActualizar(itemFinal)
                     showAgendaSheet = false
                     agendaAEditar = null
@@ -220,24 +233,6 @@ fun RimuScreen(
 }
 
 // --- CONTENEDOR PARA DESLIZAR Y BORRAR ---
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SwipeToDeleteContainer(onDelete: () -> Unit, content: @Composable () -> Unit) {
-    val state = rememberSwipeToDismissBoxState(
-        confirmValueChange = { if (it == SwipeToDismissBoxValue.EndToStart) { onDelete(); true } else false }
-    )
-    SwipeToDismissBox(
-        state = state,
-        enableDismissFromStartToEnd = false,
-        backgroundContent = {
-            val color = if (state.dismissDirection == SwipeToDismissBoxValue.EndToStart) Color.Red.copy(0.2f) else Color.Transparent
-            Box(Modifier.fillMaxSize().background(color, RoundedCornerShape(20.dp)).padding(end = 20.dp), contentAlignment = Alignment.CenterEnd) {
-                Icon(Icons.Default.Delete, "Borrar", tint = Color.Red)
-            }
-        },
-        content = { content() }
-    )
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -270,7 +265,7 @@ fun RimuHeader(fecha: Calendar, onFechaCambiada: (Calendar) -> Unit, navControll
 
             Row(modifier = Modifier.clickable { showDatePicker = true }, verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = if (SimpleDateFormat("yyyyMMdd").format(fecha.time) == SimpleDateFormat("yyyyMMdd").format(Date())) "HOY"
+                    text = if (SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(fecha.time) == SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())) "HOY"
                     else SimpleDateFormat("EEEE, d MMM", Locale("es", "ES")).format(fecha.time).uppercase(),
                     color = SecondaryText, fontSize = 11.sp, fontWeight = FontWeight.Black
                 )
@@ -306,7 +301,8 @@ fun RimuHeader(fecha: Calendar, onFechaCambiada: (Calendar) -> Unit, navControll
 }
 
 @Composable
-fun RimuAgendaItem(item: AgendaItem, isLast: Boolean) {
+fun RimuAgendaItem(item: AgendaItem, isLast: Boolean, diaActual: String) {
+    val completadoHoy = item.diasCompletados.contains(diaActual)
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(60.dp)) {
             Text(item.hora, color = SecondaryText, fontSize = 12.sp)
@@ -321,15 +317,15 @@ fun RimuAgendaItem(item: AgendaItem, isLast: Boolean) {
             modifier = Modifier.weight(1f).height(85.dp),
             color = MainCardBackground,
             shape = RoundedCornerShape(20.dp),
-            border = BorderStroke(1.dp, if (item.completado) Color.Green else CardBorderColor)
+            border = BorderStroke(1.dp, if (completadoHoy) Color.Green else CardBorderColor)
         ) {
             Row(modifier = Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(28.dp).border(1.dp, if (item.completado) Color.Green else CardBorderColor, CircleShape).background(if (item.completado) Color.Green.copy(0.1f) else Color.Transparent, CircleShape), contentAlignment = Alignment.Center) {
-                    if (item.completado) Box(modifier = Modifier.size(8.dp).background(Color.Green, CircleShape))
+                Box(modifier = Modifier.size(28.dp).border(1.dp, if (completadoHoy) Color.Green else CardBorderColor, CircleShape).background(if (completadoHoy) Color.Green.copy(0.1f) else Color.Transparent, CircleShape), contentAlignment = Alignment.Center) {
+                    if (completadoHoy) Box(modifier = Modifier.size(8.dp).background(Color.Green, CircleShape))
                 }
                 Spacer(modifier = Modifier.width(20.dp))
                 Column {
-                    Text(item.nombre, color = if (item.completado) Color.Gray else PrimaryText, fontSize = 18.sp)
+                    Text(item.nombre, color = if (completadoHoy) Color.Gray else PrimaryText, fontSize = 18.sp)
                     Text(item.descripcion, color = SecondaryText, fontSize = 14.sp)
                 }
             }

@@ -22,6 +22,7 @@ import com.example.zenithapp20.data.model.RutinaDia
 import com.example.zenithapp20.ui.components.ActiveWorkoutOverlay
 import com.example.zenithapp20.ui.components.GymConfigContent
 import com.example.zenithapp20.ui.components.GymExercisePreviewItem
+import com.example.zenithapp20.ui.components.SwipeToDeleteContainer
 import com.example.zenithapp20.ui.theme.*
 import com.example.zenithapp20.ui.viewmodel.GymViewModel // IMPORTANTE
 import java.util.Calendar
@@ -105,7 +106,14 @@ fun RimuGymScreen(
                     }
                 } else {
                     items(ejerciciosHoy) { ejercicio ->
-                        GymExercisePreviewItem(ejercicio = ejercicio)
+                        SwipeToDeleteContainer(
+                            mensajeConfirmacion = "Se eliminará '${ejercicio.nombre}' de la rutina.",
+                            onDelete = {
+                                viewModel.eliminarEjercicio(diaSeleccionado, ejercicio)
+                            }
+                        ) {
+                            GymExercisePreviewItem(ejercicio = ejercicio)
+                        }
                     }
                 }
             }
@@ -143,9 +151,9 @@ fun RimuGymScreen(
         ) {
             GymConfigContent(
                 diaActual = diaSeleccionado,
+                rutinasExistentes = rutinasCargadas, // NUEVO
                 onDiaSelect = { diaSeleccionado = it },
                 onSaveRutina = { nombre, ejercicios ->
-                    // 4. Guardamos en la Base de Datos vía ViewModel
                     viewModel.guardarRutina(RutinaDia(dia = diaSeleccionado, nombreRutina = nombre, ejercicios = ejercicios))
                     showConfigSheet = false
                 }

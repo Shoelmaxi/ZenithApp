@@ -3,6 +3,7 @@ package com.example.zenithapp20.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,7 +27,8 @@ import com.example.zenithapp20.ui.theme.SecondaryText
 fun HabitoQuickItem(
     habito: Habito,
     isCompletadoHoy: Boolean,
-    onCheckClick: () -> Unit
+    onCheckClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -34,17 +36,27 @@ fun HabitoQuickItem(
             .padding(vertical = 6.dp)
             .background(MainCardBackground, RoundedCornerShape(16.dp))
             .border(1.dp, CardBorderColor, RoundedCornerShape(16.dp))
-            .clickable { onCheckClick() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Icono sutil o inicial
+        // área de texto — solo long press para editar
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .combinedClickable(
+                    onClick = {},
+                    onLongClick = onLongClick
+                ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .background(if (isCompletadoHoy) Color.Green.copy(0.1f) else Color.White.copy(0.05f), CircleShape),
+                    .background(
+                        if (isCompletadoHoy) Color.Green.copy(0.1f) else Color.White.copy(0.05f),
+                        CircleShape
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(habito.icono, fontSize = 14.sp)
@@ -53,33 +65,25 @@ fun HabitoQuickItem(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column {
-                Text(
-                    text = habito.nombre,
-                    color = Color.White,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = habito.meta,
-                    color = SecondaryText,
-                    fontSize = 11.sp
-                )
+                Text(habito.nombre, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text(habito.meta, color = SecondaryText, fontSize = 11.sp)
             }
         }
 
-        // Botón de Check tipo "Toggle"
+        // área del check — solo toggle
         Box(
             modifier = Modifier
                 .size(28.dp)
                 .border(
-                    width = 1.dp,
-                    color = if (isCompletadoHoy) Color.Green else Color.Gray.copy(0.5f),
-                    shape = CircleShape
+                    1.dp,
+                    if (isCompletadoHoy) Color.Green else Color.Gray.copy(0.5f),
+                    CircleShape
                 )
                 .background(
                     if (isCompletadoHoy) Color.Green else Color.Transparent,
                     CircleShape
-                ),
+                )
+                .clickable { onCheckClick() },
             contentAlignment = Alignment.Center
         ) {
             if (isCompletadoHoy) {

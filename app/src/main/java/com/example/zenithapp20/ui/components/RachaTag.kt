@@ -18,8 +18,8 @@ import androidx.compose.ui.unit.sp
 
 // Archivo: ui/components/RachaTag.kt
 @Composable
-fun RachaTag(semanas: Int) {
-    if (semanas > 0) {
+fun RachaTag(dias: Int) {
+    if (dias > 0) {
         Row(
             modifier = Modifier
                 .background(Color(0xFFFFD700).copy(0.1f), RoundedCornerShape(8.dp))
@@ -27,10 +27,10 @@ fun RachaTag(semanas: Int) {
                 .padding(horizontal = 6.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("⭐", fontSize = 10.sp)
+            Text("🔥", fontSize = 10.sp)
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = "$semanas SEMANA${if (semanas > 1) "S" else ""} PERFECTA",
+                text = "$dias DÍA${if (dias > 1) "S" else ""} SEGUIDO${if (dias > 1) "S" else ""}",
                 color = Color(0xFFFFD700),
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Black
