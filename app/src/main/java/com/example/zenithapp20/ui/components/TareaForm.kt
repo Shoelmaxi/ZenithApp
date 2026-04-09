@@ -1,0 +1,128 @@
+package com.example.zenithapp20.ui.components
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.zenithapp20.data.model.Prioridad
+import com.example.zenithapp20.data.model.TareaItem
+import com.example.zenithapp20.ui.theme.CardBorderColor
+import com.example.zenithapp20.ui.theme.PrimaryText
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TareaForm(onSave: (TareaItem) -> Unit) {
+    var nombre by remember { mutableStateOf("") }
+    var desc by remember { mutableStateOf("") }
+    var prioridadSelected by remember { mutableStateOf(Prioridad.BAJA) }
+
+    val datePickerState = rememberDatePickerState()
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    // --- FIX VISUAL EN EL FORMULARIO ---
+    // Forzamos UTC aquí también para que el texto del botón no mienta
+    val fechaTexto = datePickerState.selectedDateMillis?.let {
+        val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        sdf.format(Date(it))
+    } ?: "Seleccionar fecha límite"
+
+    Column(modifier = Modifier.fillMaxWidth().padding(24.dp).padding(bottom = 40.dp)) {
+        Text("Nueva Tarea", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(20.dp))
+
+        CustomTextField(value = nombre, onValueChange = { nombre = it }, label = "Nombre de la tarea")
+        CustomTextField(value = desc, onValueChange = { desc = it }, label = "Notas/Descripción")
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedButton(
+            onClick = { showDatePicker = true },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, CardBorderColor)
+        ) {
+            Text(fechaTexto, color = PrimaryText)
+        }
+
+        if (showDatePicker) {
+            DatePickerDialog(
+                onDismissRequest = { showDatePicker = false },
+                confirmButton = {
+                    TextButton(onClick = { showDatePicker = false }) { Text("OK", color = Color.Green) }
+                }
+            ) { DatePicker(state = datePickerState) }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Aquí iría tu selector de Prioridad...
+
+        Button(
+            onClick = {
+                val seleccionMillis = datePickerState.selectedDateMillis
+
+                if(nombre.isNotEmpty() && seleccionMillis != null) {
+
+                    // 1. Extraemos el día exacto que el usuario tocó en el calendario (está en UTC)
+                    val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                        timeInMillis = seleccionMillis
+                    }
+
+                    // 2. Lo guardamos en un Calendar local pero forzando los mismos números de día/mes/año
+                    // Usamos las 12:00 PM para que esté lejos de cualquier borde horario que cause saltos
+                    val fechaFinal = Calendar.getInstance().apply {
+                        set(Calendar.YEAR, utcCal.get(Calendar.YEAR))
+                        set(Calendar.MONTH, utcCal.get(Calendar.MONTH))
+                        set(Calendar.DAY_OF_MONTH, utcCal.get(Calendar.DAY_OF_MONTH))
+                        set(Calendar.HOUR_OF_DAY, 12)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }.timeInMillis
+
+                    onSave(TareaItem(
+                        nombre = nombre,
+                        descripcion = desc,
+                        fechaLimiteMillis = fechaFinal,
+                        prioridad = prioridadSelected
+                    ))
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+        ) {
+            Text("CREAR TAREA", color = Color.Black, fontWeight = FontWeight.Bold)
+        }
+    }
+}
