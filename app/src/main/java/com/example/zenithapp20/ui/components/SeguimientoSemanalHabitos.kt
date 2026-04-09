@@ -23,7 +23,7 @@ import java.util.Calendar
 fun SeguimientoSemanalHabitos(listaHabitos: List<Habito>) {
     val diasSemana = listOf("L", "M", "X", "J", "V", "S", "D")
 
-    val timestampsSemana = remember {
+    val timestampsSemana = remember(Unit) {
         val cal = Calendar.getInstance().apply {
             // Ajuste para que la semana empiece en Lunes
             set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)

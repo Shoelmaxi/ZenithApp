@@ -8,15 +8,37 @@ import com.example.zenithapp20.data.model.RutinaDia
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+// Estado del entrenamiento activo — vive en el ViewModel, sobrevive a pantalla apagada
+data class WorkoutState(
+    val ejIdx: Int = 0,
+    val serieActual: Int = 1,
+    val ejerciciosFinales: List<EjercicioGym> = emptyList()
+)
+
 class GymViewModel(private val dao: GymDao) : ViewModel() {
 
-    // Todas las rutinas para referencia rápida
     val todasLasRutinas: StateFlow<List<RutinaDia>> = dao.getAllRutinas()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // --- ESTADO DEL ENTRENAMIENTO ACTIVO ---
+    private val _workoutState = MutableStateFlow<WorkoutState?>(null)
+    val workoutState: StateFlow<WorkoutState?> = _workoutState.asStateFlow()
+
+    fun iniciarEntrenamiento(ejercicios: List<EjercicioGym>) {
+        _workoutState.value = WorkoutState(ejerciciosFinales = ejercicios)
+    }
+
+    fun actualizarWorkoutState(state: WorkoutState) {
+        _workoutState.value = state
+    }
+
+    fun finalizarEntrenamiento() {
+        _workoutState.value = null
+    }
+
+    // --- CRUD RUTINAS ---
     fun guardarRutina(rutina: RutinaDia) {
         viewModelScope.launch {
-            // Buscamos si ya existe una rutina para ese día para mantener el ID y actualizar
             val existente = todasLasRutinas.value.find { it.dia == rutina.dia }
             if (existente != null) {
                 dao.updateRutina(rutina.copy(id = existente.id))
@@ -26,7 +48,7 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
         }
     }
 
-    fun actualizarEjerciciosPostEntreno(dia: String, ejerciciosActualizados: List<com.example.zenithapp20.data.model.EjercicioGym>) {
+    fun actualizarEjerciciosPostEntreno(dia: String, ejerciciosActualizados: List<EjercicioGym>) {
         viewModelScope.launch {
             val rutinaActual = todasLasRutinas.value.find { it.dia == dia }
             rutinaActual?.let {
@@ -39,7 +61,8 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
         viewModelScope.launch {
             val rutinaActual = todasLasRutinas.value.find { it.dia == dia }
             rutinaActual?.let {
-                val nuevaLista = it.ejercicios.filter { e -> e.nombre != ejercicio.nombre }
+                // Usamos remove() en vez de filter por nombre para no borrar duplicados
+                val nuevaLista = it.ejercicios.toMutableList().also { list -> list.remove(ejercicio) }
                 dao.updateRutina(it.copy(ejercicios = nuevaLista))
             }
         }

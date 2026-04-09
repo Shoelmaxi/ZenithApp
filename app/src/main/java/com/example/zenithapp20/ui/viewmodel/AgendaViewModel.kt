@@ -15,7 +15,7 @@ class AgendaViewModel(private val dao: AgendaDao) : ViewModel() {
     val agendaFiltrada: StateFlow<List<AgendaItem>> = _diaSeleccionado
         .flatMapLatest { dia ->
             // Buscamos el día dentro del JSON que guarda Room
-            dao.getAgendaPorDia("%$dia%")
+            dao.getAgendaPorDia("%\"$dia\"%")
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

@@ -24,37 +24,43 @@ import com.example.zenithapp20.ui.components.GymConfigContent
 import com.example.zenithapp20.ui.components.GymExercisePreviewItem
 import com.example.zenithapp20.ui.components.SwipeToDeleteContainer
 import com.example.zenithapp20.ui.theme.*
-import com.example.zenithapp20.ui.viewmodel.GymViewModel // IMPORTANTE
+import com.example.zenithapp20.ui.viewmodel.GymViewModel
+import com.example.zenithapp20.ui.viewmodel.WorkoutState
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RimuGymScreen(
     navController: NavController,
-    viewModel: GymViewModel // 1. Recibimos el ViewModel
+    viewModel: GymViewModel
 ) {
-    // 2. Observamos las rutinas desde la base de datos
     val rutinasCargadas by viewModel.todasLasRutinas.collectAsState()
+
+    // FIX: El estado del entrenamiento viene del ViewModel — sobrevive a pantalla apagada
+    val workoutState by viewModel.workoutState.collectAsState()
+    val entrenandoActivo = workoutState != null
 
     val diaHoy = remember {
         val calendar = Calendar.getInstance()
         val diasMap = mapOf(
             Calendar.MONDAY to "L", Calendar.TUESDAY to "M", Calendar.WEDNESDAY to "X",
-            Calendar.THURSDAY to "J", Calendar.FRIDAY to "V", Calendar.SATURDAY to "S", Calendar.SUNDAY to "D"
+            Calendar.THURSDAY to "J", Calendar.FRIDAY to "V", Calendar.SATURDAY to "S",
+            Calendar.SUNDAY to "D"
         )
         diasMap[calendar.get(Calendar.DAY_OF_WEEK)] ?: "L"
     }
 
     var diaSeleccionado by remember { mutableStateOf(diaHoy) }
     var showConfigSheet by remember { mutableStateOf(false) }
-    var entrenandoActivo by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // 3. La rutina se busca automáticamente en la lista reactiva de Room
     val rutinaSeleccionada = rutinasCargadas.find { it.dia == diaSeleccionado }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(DeepBackground).padding(horizontal = 24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(DeepBackground)
+            .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(48.dp))
@@ -66,11 +72,18 @@ fun RimuGymScreen(
             IconButton(onClick = { navController.popBackStack() }) {
                 Icon(Icons.Default.ArrowBack, "Volver", tint = SecondaryText)
             }
-            Text("GYM PERFORMANCE", color = SecondaryText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "GYM PERFORMANCE",
+                color = SecondaryText,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
 
         Column(
-            modifier = Modifier.fillMaxWidth().weight(1f)
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
                 .border(1.dp, CardBorderColor, RoundedCornerShape(24.dp))
                 .background(MainCardBackground, RoundedCornerShape(24.dp))
                 .padding(24.dp)
@@ -81,7 +94,12 @@ fun RimuGymScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("SIN EXCUSAS", color = PrimaryText, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        "SIN EXCUSAS",
+                        color = PrimaryText,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Black
+                    )
                     Text(
                         text = "Día de ${getNombreRutina(diaSeleccionado, rutinasCargadas)}",
                         color = SecondaryText,
@@ -89,7 +107,7 @@ fun RimuGymScreen(
                     )
                 }
                 IconButton(onClick = { showConfigSheet = true }) {
-                    Icon(Icons.Default.Settings, contentDescription = "Configurar", tint = SecondaryText)
+                    Icon(Icons.Default.Settings, "Configurar", tint = SecondaryText)
                 }
             }
 
@@ -102,15 +120,17 @@ fun RimuGymScreen(
                 val ejerciciosHoy = rutinaSeleccionada?.ejercicios ?: emptyList()
                 if (ejerciciosHoy.isEmpty()) {
                     item {
-                        Text("No hay ejercicios planificados para hoy.", color = SecondaryText, fontSize = 14.sp)
+                        Text(
+                            "No hay ejercicios planificados para hoy.",
+                            color = SecondaryText,
+                            fontSize = 14.sp
+                        )
                     }
                 } else {
                     items(ejerciciosHoy) { ejercicio ->
                         SwipeToDeleteContainer(
                             mensajeConfirmacion = "Se eliminará '${ejercicio.nombre}' de la rutina.",
-                            onDelete = {
-                                viewModel.eliminarEjercicio(diaSeleccionado, ejercicio)
-                            }
+                            onDelete = { viewModel.eliminarEjercicio(diaSeleccionado, ejercicio) }
                         ) {
                             GymExercisePreviewItem(ejercicio = ejercicio)
                         }
@@ -123,7 +143,11 @@ fun RimuGymScreen(
             val hayEjercicios = rutinaSeleccionada?.ejercicios?.isNotEmpty() == true
 
             Button(
-                onClick = { entrenandoActivo = true },
+                onClick = {
+                    rutinaSeleccionada?.ejercicios?.let { ejercicios ->
+                        viewModel.iniciarEntrenamiento(ejercicios)
+                    }
+                },
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White.copy(alpha = 0.1f),
@@ -133,8 +157,12 @@ fun RimuGymScreen(
                 enabled = !entrenandoActivo && hayEjercicios
             ) {
                 Text(
-                    text = if (hayEjercicios) "COMENZAR ENTRENAMIENTO" else "CONFIGURA TU RUTINA",
-                    color = if (hayEjercicios) Color.White else Color.Gray,
+                    text = when {
+                        entrenandoActivo -> "ENTRENAMIENTO EN CURSO..."
+                        hayEjercicios -> "COMENZAR ENTRENAMIENTO"
+                        else -> "CONFIGURA TU RUTINA"
+                    },
+                    color = if (hayEjercicios && !entrenandoActivo) Color.White else Color.Gray,
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 16.sp
                 )
@@ -143,6 +171,7 @@ fun RimuGymScreen(
         Spacer(modifier = Modifier.height(24.dp))
     }
 
+    // Sheet de configuración
     if (showConfigSheet) {
         ModalBottomSheet(
             onDismissRequest = { showConfigSheet = false },
@@ -151,35 +180,39 @@ fun RimuGymScreen(
         ) {
             GymConfigContent(
                 diaActual = diaSeleccionado,
-                rutinasExistentes = rutinasCargadas, // NUEVO
+                rutinasExistentes = rutinasCargadas,
                 onDiaSelect = { diaSeleccionado = it },
                 onSaveRutina = { nombre, ejercicios ->
-                    viewModel.guardarRutina(RutinaDia(dia = diaSeleccionado, nombreRutina = nombre, ejercicios = ejercicios))
+                    viewModel.guardarRutina(
+                        RutinaDia(
+                            dia = diaSeleccionado,
+                            nombreRutina = nombre,
+                            ejercicios = ejercicios
+                        )
+                    )
                     showConfigSheet = false
                 }
             )
         }
     }
 
-    if (entrenandoActivo) {
+    // Overlay del entrenamiento activo
+    // FIX: Usa workoutState del ViewModel — si la pantalla se apaga y vuelve, retoma donde estaba
+    workoutState?.let { state ->
         ActiveWorkoutOverlay(
-            ejercicios = rutinaSeleccionada?.ejercicios ?: emptyList(),
+            workoutState = state,
+            onStateUpdate = { nuevoEstado ->
+                viewModel.actualizarWorkoutState(nuevoEstado)
+            },
             onFinish = { ejerciciosActualizados ->
-                // 5. Persistimos los resultados del entrenamiento (PRs y Logs)
                 viewModel.actualizarEjerciciosPostEntreno(diaSeleccionado, ejerciciosActualizados)
-                entrenandoActivo = false
+                viewModel.finalizarEntrenamiento()
             }
         )
     }
 }
 
 fun getNombreRutina(dia: String, lista: List<RutinaDia>): String {
-
-
     val rutina = lista.find { it.dia == dia }
-
-
     return if (rutina == null || rutina.nombreRutina.isEmpty()) "Descanso" else rutina.nombreRutina
-
-
 }

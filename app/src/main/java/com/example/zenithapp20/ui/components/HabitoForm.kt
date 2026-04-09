@@ -119,7 +119,7 @@ fun HabitoForm(
         Button(
             onClick = {
                 if (nombreHabito.isNotEmpty()) {
-                    nombreError = true
+                    nombreError = false
                     // LÓGICA DE PERSISTENCIA:
                     val habitoFinal = if (habitoAEditar != null) {
                         // Mantenemos ID y Checks, solo cambiamos datos del form
@@ -129,6 +129,7 @@ fun HabitoForm(
                             categoria = categoriaSeleccionada
                         )
                     } else {
+                        nombreError = true
                         // Es un hábito nuevo
                         Habito(
                             nombre = nombreHabito,
