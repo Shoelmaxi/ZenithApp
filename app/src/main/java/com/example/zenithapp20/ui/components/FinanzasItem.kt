@@ -22,6 +22,7 @@ import com.example.zenithapp20.ui.theme.CardBorderColor
 import com.example.zenithapp20.ui.theme.MainCardBackground
 import com.example.zenithapp20.ui.theme.SecondaryText
 
+
 @Composable
 fun FinanzasItem(transaccion: Transaccion) {
     Row(
@@ -40,7 +41,10 @@ fun FinanzasItem(transaccion: Transaccion) {
         }
 
         Text(
-            text = if (transaccion.tipo == TipoTransaccion.INGRESO) "+$${transaccion.monto}" else "-$${transaccion.monto}",
+            text = if (transaccion.tipo == TipoTransaccion.INGRESO)
+                "+${formatCLP(transaccion.monto)}"
+            else
+                "-${formatCLP(transaccion.monto)}",
             color = if (transaccion.tipo == TipoTransaccion.INGRESO) Color.Green else Color.Red,
             fontSize = 18.sp,
             fontWeight = FontWeight.Black

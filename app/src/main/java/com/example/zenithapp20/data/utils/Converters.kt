@@ -49,4 +49,9 @@ class Converters {
         val listType = object : TypeToken<List<EjercicioGym>>() {}.type
         return gson.fromJson(value, listType)
     }
+    @TypeConverter
+    fun fromTipoAgenda(tipo: TipoAgenda): String = tipo.name
+
+    @TypeConverter
+    fun toTipoAgenda(value: String): TipoAgenda = TipoAgenda.valueOf(value)
 }

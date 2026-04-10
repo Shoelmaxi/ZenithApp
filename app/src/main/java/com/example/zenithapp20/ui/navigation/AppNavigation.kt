@@ -8,10 +8,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.zenithapp20.data.database.AppDatabase
+import com.example.zenithapp20.ui.screen.RimuBackupScreen
 import com.example.zenithapp20.ui.screen.RimuFinanceScreen
 import com.example.zenithapp20.ui.screen.RimuGymScreen
 import com.example.zenithapp20.ui.screen.RimuHabitsStatsScreen
 import com.example.zenithapp20.ui.screen.RimuScreen
+import com.example.zenithapp20.ui.screen.RimuWeekScreen
 import com.example.zenithapp20.ui.viewmodel.AgendaViewModel
 import com.example.zenithapp20.ui.viewmodel.FinanzasViewModel
 import com.example.zenithapp20.ui.viewmodel.GymViewModel
@@ -62,6 +64,18 @@ fun AppNavigation() {
         composable("rimu_finance") {
             val finanzasVM: FinanzasViewModel = viewModel(factory = factory)
             RimuFinanceScreen(navController = navController, viewModel = finanzasVM)
+        }
+        composable("rimu_week") {
+            val agendaVM: AgendaViewModel = viewModel(factory = factory)
+            val habitosVM: HabitosViewModel = viewModel(factory = factory)
+            RimuWeekScreen(
+                navController = navController,
+                agendaViewModel = agendaVM,
+                habitosViewModel = habitosVM
+            )
+        }
+        composable("rimu_backup") {
+            RimuBackupScreen(navController = navController)
         }
     }
 }

@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.zenithapp20.ui.components.FinanceForm
 import com.example.zenithapp20.ui.components.FinanzasItem
+import com.example.zenithapp20.ui.components.formatCLP
 import com.example.zenithapp20.ui.theme.CardBorderColor
 import com.example.zenithapp20.ui.theme.DeepBackground
 import com.example.zenithapp20.ui.theme.MainCardBackground
@@ -68,7 +69,7 @@ fun RimuFinanceScreen(navController: NavController, viewModel: FinanzasViewModel
             ) {
                 Text("BALANCE DISPONIBLE", color = SecondaryText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    text = "$$balance",
+                    text = formatCLP(balance),
                     color = if (balance >= 0) Color.White else Color.Red,
                     fontSize = 42.sp,
                     fontWeight = FontWeight.Black
@@ -137,9 +138,6 @@ fun RimuFinanceScreen(navController: NavController, viewModel: FinanzasViewModel
 fun FinanceStat(label: String, value: Int, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, color = SecondaryText, fontSize = 10.sp)
-        Text("$$value", color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text(formatCLP(value), color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
-}
-fun formatCLP(monto: Int): String {
-    return "$" + "%,d".format(monto).replace(",", ".")
 }

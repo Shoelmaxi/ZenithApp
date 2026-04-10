@@ -23,7 +23,7 @@ import com.example.zenithapp20.data.model.TareaItem
         AgendaItem::class,
         TareaItem::class
     ],
-    version = 2
+    version = 3
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -68,6 +68,31 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE agenda_new RENAME TO agenda")
             }
         }
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+            CREATE TABLE agenda_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                nombre TEXT NOT NULL,
+                descripcion TEXT NOT NULL,
+                hora TEXT NOT NULL,
+                tipo TEXT NOT NULL DEFAULT 'RECURRENTE',
+                dias TEXT NOT NULL DEFAULT '[]',
+                fechaEspecificaMillis INTEGER,
+                diasCompletados TEXT NOT NULL DEFAULT '[]'
+            )
+        """.trimIndent())
+
+                database.execSQL("""
+            INSERT INTO agenda_new (id, nombre, descripcion, hora, tipo, dias, fechaEspecificaMillis, diasCompletados)
+            SELECT id, nombre, descripcion, hora, 'RECURRENTE', dias, NULL, diasCompletados
+            FROM agenda
+        """.trimIndent())
+
+                database.execSQL("DROP TABLE agenda")
+                database.execSQL("ALTER TABLE agenda_new RENAME TO agenda")
+            }
+        }
 
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -77,7 +102,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "zenith_database"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                     .also { INSTANCE = it }
             }

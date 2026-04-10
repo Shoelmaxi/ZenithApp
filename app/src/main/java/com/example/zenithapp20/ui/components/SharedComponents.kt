@@ -44,3 +44,7 @@ fun DayChip(dia: String, seleccionado: Boolean, onClick: () -> Unit) {
         }
     }
 }
+
+fun formatCLP(monto: Int): String {
+    return "$" + "%,d".format(monto).replace(",", ".")
+}

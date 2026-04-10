@@ -46,6 +46,8 @@ import com.example.zenithapp20.ui.components.SwipeToDeleteContainer
 import com.example.zenithapp20.ui.viewmodel.AgendaViewModel
 import com.example.zenithapp20.ui.viewmodel.TareasViewModel // Asumiendo este nombre
 import com.example.zenithapp20.ui.viewmodel.HabitosViewModel // Asumiendo este nombre
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Settings
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -87,6 +89,7 @@ fun RimuScreen(
 
     LaunchedEffect(inicioDiaSeleccionado) {
         tareasViewModel.cambiarFechaFiltro(inicioDiaSeleccionado)
+        agendaViewModel.cambiarFecha(inicioDiaSeleccionado)
     }
 
     var showAgendaSheet by remember { mutableStateOf(false) }
@@ -296,6 +299,26 @@ fun RimuHeader(fecha: Calendar, onFechaCambiada: (Calendar) -> Unit, navControll
                 onClick = { navController.navigate("rimu_habits_stats") },
                 modifier = Modifier.size(40.dp).background(Color.White.copy(alpha = 0.05f), CircleShape).border(1.dp, CardBorderColor, CircleShape)
             ) { Icon(Icons.Default.BarChart, "Estadísticas", tint = Color.White, modifier = Modifier.size(18.dp)) }
+
+            IconButton(
+                onClick = { navController.navigate("rimu_week") },
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color.White.copy(alpha = 0.05f), CircleShape)
+                    .border(1.dp, CardBorderColor, CircleShape)
+            ) {
+                Icon(Icons.Default.CalendarMonth, "Semana", tint = Color.White, modifier = Modifier.size(18.dp))
+            }
+
+            IconButton(
+                onClick = { navController.navigate("rimu_backup") },
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color.White.copy(alpha = 0.05f), CircleShape)
+                    .border(1.dp, CardBorderColor, CircleShape)
+            ) {
+                Icon(Icons.Default.Settings, "Backup", tint = Color.White, modifier = Modifier.size(18.dp))
+            }
         }
     }
 }

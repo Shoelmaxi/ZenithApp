@@ -1,7 +1,11 @@
 package com.example.zenithapp20.ui.components
 
+import androidx.benchmark.traceprocessor.Row
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -13,6 +17,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -92,7 +97,44 @@ fun TareaForm(onSave: (TareaItem) -> Unit) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Aquí iría tu selector de Prioridad...
+        Text(
+            "PRIORIDAD",
+            color = Color.White.copy(0.5f),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Prioridad.entries.forEach { prioridad ->
+                val isSelected = prioridadSelected == prioridad
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { prioridadSelected = prioridad },
+                    color = if (isSelected) prioridad.color.copy(0.15f) else Color.White.copy(0.05f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (isSelected) prioridad.color else Color.White.copy(0.1f)
+                    )
+                ) {
+                    Text(
+                        text = prioridad.nombre.uppercase(),
+                        color = if (isSelected) prioridad.color else Color.White.copy(0.5f),
+                        modifier = Modifier.padding(vertical = 10.dp).fillMaxWidth(),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = {

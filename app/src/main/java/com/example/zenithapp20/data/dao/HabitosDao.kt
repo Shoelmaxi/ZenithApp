@@ -21,4 +21,7 @@ interface HabitosDao {
 
     @Query("SELECT * FROM habitos WHERE id = :id")
     suspend fun getHabitoById(id: Long): Habito?
+
+    @Query("SELECT * FROM habitos")
+    suspend fun getAllHabitosSync(): List<Habito>
 }
