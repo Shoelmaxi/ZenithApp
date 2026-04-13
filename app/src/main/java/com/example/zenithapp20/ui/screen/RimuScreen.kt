@@ -221,11 +221,16 @@ fun RimuScreen(
     }
 
     if (showTareaSheet) {
-        ModalBottomSheet(onDismissRequest = { showTareaSheet = false; tareaAEditar = null }, containerColor = MainCardBackground) {
+        ModalBottomSheet(
+            onDismissRequest = { showTareaSheet = false; tareaAEditar = null },
+            containerColor = MainCardBackground
+        ) {
             TareaForm(
-                // Aquí igual, pasar 'tareaAEditar = tareaAEditar' al componente
+                tareaAEditar = tareaAEditar,
                 onSave = { nueva ->
-                    val tareaFinal = if (tareaAEditar != null) nueva.copy(id = tareaAEditar!!.id) else nueva
+                    val tareaFinal = if (tareaAEditar != null)
+                        nueva.copy(id = tareaAEditar!!.id)
+                    else nueva
                     tareasViewModel.guardarOActualizar(tareaFinal)
                     showTareaSheet = false
                     tareaAEditar = null

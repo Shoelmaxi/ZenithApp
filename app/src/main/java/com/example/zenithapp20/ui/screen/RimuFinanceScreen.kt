@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.zenithapp20.ui.components.FinanceForm
 import com.example.zenithapp20.ui.components.FinanzasItem
+import com.example.zenithapp20.ui.components.SwipeToDeleteContainer
 import com.example.zenithapp20.ui.components.formatCLP
 import com.example.zenithapp20.ui.theme.CardBorderColor
 import com.example.zenithapp20.ui.theme.DeepBackground
@@ -113,8 +114,12 @@ fun RimuFinanceScreen(navController: NavController, viewModel: FinanzasViewModel
                 }
             } else {
                 items(listaTransacciones) { transaccion ->
-                    // Aquí podrías envolverlo en tu SwipeToDeleteContainer si quieres borrar
-                    FinanzasItem(transaccion = transaccion)
+                    SwipeToDeleteContainer(
+                        mensajeConfirmacion = "Se eliminará '${transaccion.nombre}' de tus movimientos.",
+                        onDelete = { viewModel.eliminarTransaccion(transaccion) }
+                    ) {
+                        FinanzasItem(transaccion = transaccion)
+                    }
                 }
             }
         }

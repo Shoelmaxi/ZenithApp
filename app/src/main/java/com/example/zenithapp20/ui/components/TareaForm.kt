@@ -43,27 +43,34 @@ import java.util.TimeZone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TareaForm(onSave: (TareaItem) -> Unit) {
-    var nombre by remember { mutableStateOf("") }
-    var desc by remember { mutableStateOf("") }
-    var prioridadSelected by remember { mutableStateOf(Prioridad.BAJA) }
+fun TareaForm(tareaAEditar: TareaItem? = null,
+              onSave: (TareaItem) -> Unit) {
+    var nombre by remember { mutableStateOf(tareaAEditar?.nombre ?: "") }
+    var desc by remember { mutableStateOf(tareaAEditar?.descripcion ?: "") }
+    var prioridadSelected by remember { mutableStateOf(tareaAEditar?.prioridad ?: Prioridad.BAJA) }
     var nombreError by remember { mutableStateOf(false) }
     var fechaError by remember { mutableStateOf(false) }
 
-    val datePickerState = rememberDatePickerState()
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = tareaAEditar?.fechaLimiteMillis
+    )
     var showDatePicker by remember { mutableStateOf(false) }
 
     // --- FIX VISUAL EN EL FORMULARIO ---
     // Forzamos UTC aquí también para que el texto del botón no mienta
     val fechaTexto = datePickerState.selectedDateMillis?.let {
-        val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).apply {
+        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).apply {
             timeZone = TimeZone.getTimeZone("UTC")
-        }
-        sdf.format(Date(it))
+        }.format(Date(it))
     } ?: "Seleccionar fecha límite"
 
     Column(modifier = Modifier.fillMaxWidth().padding(24.dp).padding(bottom = 40.dp)) {
-        Text("Nueva Tarea", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(
+            if (tareaAEditar == null) "Nueva Tarea" else "Editar Tarea",
+            color = Color.White,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
         Spacer(modifier = Modifier.height(20.dp))
 
         CustomTextField(value = nombre, onValueChange = { nombre = it }, label = "Nombre de la tarea")

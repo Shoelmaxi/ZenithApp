@@ -27,7 +27,7 @@ fun AppNavigation() {
 
     // 1. Inicializamos la base de datos y la fábrica de ViewModels
     val database = remember { AppDatabase.getDatabase(context) }
-    val factory = remember { AppViewModelFactory(database) }
+    val factory = remember { AppViewModelFactory(database, context) }
 
     NavHost(
         navController = navController,

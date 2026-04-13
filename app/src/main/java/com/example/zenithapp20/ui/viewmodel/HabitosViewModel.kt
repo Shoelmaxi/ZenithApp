@@ -1,20 +1,29 @@
 package com.example.zenithapp20.ui.viewmodel
 
+import android.content.Context
+import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.zenithapp20.data.dao.HabitosDao
 import com.example.zenithapp20.data.model.Habito
+import com.example.zenithapp20.ui.widget.ZenithWidget
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
-class HabitosViewModel(private val dao: HabitosDao) : ViewModel() {
+class HabitosViewModel(
+    private val dao: HabitosDao,
+    private val context: Context
+) : ViewModel() {
 
     val habitos: StateFlow<List<Habito>> = dao.getAllHabitos()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun guardarHabito(habito: Habito) {
-        viewModelScope.launch { dao.insertHabito(habito) }
+        viewModelScope.launch {
+            dao.insertHabito(habito)
+            actualizarWidget()
+        }
     }
 
     fun verificarSiCompletadoEnFecha(habito: Habito, fechaMillis: Long): Boolean {
@@ -48,9 +57,16 @@ class HabitosViewModel(private val dao: HabitosDao) : ViewModel() {
             }
 
             dao.updateHabito(habito.copy(checks = nuevosChecks))
+            actualizarWidget()
         }
     }
     fun eliminarHabito(habito: Habito) {
         viewModelScope.launch { dao.deleteHabito(habito) }
+    }
+
+    private fun actualizarWidget() {
+        viewModelScope.launch {
+            ZenithWidget().updateAll(context)
+        }
     }
 }
