@@ -22,6 +22,11 @@ import com.example.zenithapp20.data.model.Habito
 import com.example.zenithapp20.ui.theme.CardBorderColor
 import com.example.zenithapp20.ui.theme.MainCardBackground
 import com.example.zenithapp20.ui.theme.SecondaryText
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.graphicsLayer
 
 @Composable
 fun HabitoQuickItem(
@@ -71,28 +76,32 @@ fun HabitoQuickItem(
         }
 
         // área del check — solo toggle
+        val scale by animateFloatAsState(
+            targetValue = if (isCompletadoHoy) 1f else 0.9f,
+            animationSpec = spring(dampingRatio = 0.4f, stiffness = 400f),
+            label = "check_scale"
+        )
+        val checkColor by animateColorAsState(
+            targetValue = if (isCompletadoHoy) Color.Green else Color.Transparent,
+            label = "check_color"
+        )
+        val borderColor by animateColorAsState(
+            targetValue = if (isCompletadoHoy) Color.Green else Color.Gray.copy(0.5f),
+            label = "check_border"
+        )
+
         Box(
             modifier = Modifier
                 .size(28.dp)
-                .border(
-                    1.dp,
-                    if (isCompletadoHoy) Color.Green else Color.Gray.copy(0.5f),
-                    CircleShape
-                )
-                .background(
-                    if (isCompletadoHoy) Color.Green else Color.Transparent,
-                    CircleShape
-                )
+                .graphicsLayer(scaleX = scale, scaleY = scale)  // ← animación de escala
+                .border(1.dp, borderColor, CircleShape)
+                .background(checkColor, CircleShape)
                 .clickable { onCheckClick() },
             contentAlignment = Alignment.Center
         ) {
             if (isCompletadoHoy) {
-                Icon(
-                    Icons.Default.Check,
-                    contentDescription = null,
-                    tint = Color.Black,
-                    modifier = Modifier.size(16.dp)
-                )
+                Icon(Icons.Default.Check, contentDescription = null,
+                    tint = Color.Black, modifier = Modifier.size(16.dp))
             }
         }
     }

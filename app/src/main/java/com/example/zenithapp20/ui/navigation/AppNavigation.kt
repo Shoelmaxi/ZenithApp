@@ -1,5 +1,8 @@
 package com.example.zenithapp20.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
@@ -31,7 +34,11 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = "rimu_screen"
+        startDestination = "rimu_screen",
+        enterTransition = { fadeIn(animationSpec = tween(220)) },
+        exitTransition = { fadeOut(animationSpec = tween(180)) },
+        popEnterTransition = { fadeIn(animationSpec = tween(220)) },
+        popExitTransition = { fadeOut(animationSpec = tween(180)) }
     ) {
         // --- PANTALLA PRINCIPAL (HÁBITOS) ---
         composable("rimu_screen") {

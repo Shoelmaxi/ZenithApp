@@ -52,9 +52,9 @@ class ZenithApp : Application() {
             .build()
 
         workManager.enqueueUniquePeriodicWork(
-            "racha_en_riesgo",
-            ExistingPeriodicWorkPolicy.REPLACE, // REPLACE para que aplique el cambio ahora
-            rachaRequest
+            "recordatorio_mañana",
+            ExistingPeriodicWorkPolicy.KEEP,
+            recordatorioRequest  // ← el worker que faltaba
         )
         workManager.enqueueUniquePeriodicWork(
             "racha_en_riesgo",

@@ -1,5 +1,7 @@
 package com.example.zenithapp20.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -7,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,9 +28,22 @@ fun SeguimientoSemanalHabitos(listaHabitos: List<Habito>) {
 
     val timestampsSemana = remember(Unit) {
         val cal = Calendar.getInstance().apply {
-            // Ajuste para que la semana empiece en Lunes
+            // Forzamos que la semana empiece el lunes
+            firstDayOfWeek = Calendar.MONDAY
+
+            // Nos posicionamos en el inicio de la semana actual
             set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+
+            // Si hoy es domingo (valor 1 en Java), retrocedemos 6 días manualmente
+            // para que caiga en el lunes de ESTA semana, no de la siguiente
+            if (get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+                add(Calendar.DAY_OF_YEAR, -6)
+            }
+
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
         }
         List(7) {
             val time = cal.timeInMillis
@@ -120,24 +136,25 @@ fun FilaHabitoStats(habito: Habito, timestampsSemana: List<Long>) {
             timestampsSemana.forEach { inicioDia ->
                 val finDia = inicioDia + 86400000
                 val cumplidoEseDia = habito.checks.any { it in inicioDia until finDia }
+                val colorFondo by animateColorAsState(
+                    targetValue = if (cumplidoEseDia) Color(0xFF00C853).copy(0.15f) else Color.White.copy(0.03f),
+                    animationSpec = tween(400),
+                    label = "dot_bg"
+                )
+                val colorPunto by animateColorAsState(
+                    targetValue = if (cumplidoEseDia) Color(0xFF00C853) else Color.White.copy(0.1f),
+                    animationSpec = tween(400),
+                    label = "dot_color"
+                )
+
 
                 Box(
                     modifier = Modifier
                         .size(22.dp)
-                        .background(
-                            color = if (cumplidoEseDia) Color(0xFF00C853).copy(0.15f) else Color.White.copy(0.03f),
-                            shape = CircleShape
-                        ),
+                        .background(color = colorFondo, shape = CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(7.dp)
-                            .background(
-                                color = if (cumplidoEseDia) Color(0xFF00C853) else Color.White.copy(0.1f),
-                                shape = CircleShape
-                            )
-                    )
+                    Box(modifier = Modifier.size(7.dp).background(color = colorPunto, shape = CircleShape))
                 }
             }
         }

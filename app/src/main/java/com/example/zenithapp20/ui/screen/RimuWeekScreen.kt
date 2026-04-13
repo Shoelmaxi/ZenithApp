@@ -356,8 +356,12 @@ data class DiaSemana(
 fun obtenerDiasSemana(): List<DiaSemana> {
     val hoy = Calendar.getInstance()
     val lunes = Calendar.getInstance().apply {
-        set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-        if (get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) add(Calendar.WEEK_OF_YEAR, -1)
+        firstDayOfWeek = Calendar.MONDAY
+        if (get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+            add(Calendar.DAY_OF_YEAR, -6)
+        } else {
+            set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+        }
         set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
         set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
     }

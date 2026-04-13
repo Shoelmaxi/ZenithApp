@@ -49,6 +49,11 @@ import com.example.zenithapp20.ui.viewmodel.HabitosViewModel // Asumiendo este n
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun RimuScreen(
@@ -140,24 +145,35 @@ fun RimuScreen(
                 item { SeccionHeader(titulo = "HÁBITOS DE HOY", onAddClick = { habitoAEditar = null; showHabitoSheet = true }) }
                 if (listaHabitos.isEmpty()) {
                     item { EmptyStateText("Agrega un hábito para empezar") }
-                } else {
-                    items(listaHabitos) { habito ->
-                        // Agregamos Swipe para borrar hábitos también
-                        SwipeToDeleteContainer(
-                            mensajeConfirmacion = "Se eliminará el hábito '${habito.nombre}' y toda su racha.",
-                            onDelete = { habitosViewModel.eliminarHabito(habito) }
-                        ) {
-                            HabitoQuickItem(
-                                habito = habito,
-                                isCompletadoHoy = habitosViewModel.verificarSiCompletadoEnFecha(
-                                    habito,
-                                    fechaSeleccionada.timeInMillis
-                                ),
-                                onCheckClick = {
-                                    habitosViewModel.toggleCheckEnFecha(habito, fechaSeleccionada.timeInMillis)
-                                },
-                                onLongClick = { habitoAEditar = habito; showHabitoSheet = true }
+                }
+                else {
+                    items(listaHabitos.size) { index ->
+                        val habito = listaHabitos[index]
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = fadeIn() + slideInVertically(
+                                initialOffsetY = { it / 3 },
+                                animationSpec = spring(stiffness = 300f)
                             )
+                        ){
+
+                            // Agregamos Swipe para borrar hábitos también
+                            SwipeToDeleteContainer(
+                                mensajeConfirmacion = "Se eliminará el hábito '${habito.nombre}' y toda su racha.",
+                                onDelete = { habitosViewModel.eliminarHabito(habito) }
+                            ) {
+                                HabitoQuickItem(
+                                    habito = habito,
+                                    isCompletadoHoy = habitosViewModel.verificarSiCompletadoEnFecha(
+                                        habito,
+                                        fechaSeleccionada.timeInMillis
+                                    ),
+                                    onCheckClick = {
+                                        habitosViewModel.toggleCheckEnFecha(habito, fechaSeleccionada.timeInMillis)
+                                    },
+                                    onLongClick = { habitoAEditar = habito; showHabitoSheet = true }
+                                )
+                            }
                         }
                     }
                 }

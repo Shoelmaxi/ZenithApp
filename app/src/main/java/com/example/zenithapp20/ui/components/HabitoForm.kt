@@ -129,7 +129,7 @@ fun HabitoForm(
                             categoria = categoriaSeleccionada
                         )
                     } else {
-                        nombreError = true
+                        nombreError = false
                         // Es un hábito nuevo
                         Habito(
                             nombre = nombreHabito,
