@@ -21,16 +21,15 @@ class AppViewModelFactory(
                 HabitosViewModel(db.habitosDao(), context) as T
             modelClass.isAssignableFrom(FinanzasViewModel::class.java) ->
                 FinanzasViewModel(db.finanzasDao()) as T
+            // GymViewModel ahora recibe también habitosDao para gestionar el hábito vinculado
             modelClass.isAssignableFrom(GymViewModel::class.java) ->
-                GymViewModel(db.gymDao()) as T
-            // --- ESTO ES LO QUE FALTABA ---
+                GymViewModel(db.gymDao(), db.habitosDao()) as T
             modelClass.isAssignableFrom(AgendaViewModel::class.java) ->
                 AgendaViewModel(db.agendaDao()) as T
             modelClass.isAssignableFrom(TareasViewModel::class.java) ->
                 TareasViewModel(db.tareasDao()) as T
             modelClass.isAssignableFrom(AguaViewModel::class.java) ->
                 AguaViewModel(db.aguaDao(), db.habitosDao()) as T
-            // ------------------------------
             else -> throw IllegalArgumentException("ViewModel desconocido: ${modelClass.name}")
         }
     }

@@ -25,7 +25,6 @@ import com.example.zenithapp20.ui.components.GymExercisePreviewItem
 import com.example.zenithapp20.ui.components.SwipeToDeleteContainer
 import com.example.zenithapp20.ui.theme.*
 import com.example.zenithapp20.ui.viewmodel.GymViewModel
-import com.example.zenithapp20.ui.viewmodel.WorkoutState
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,8 +34,6 @@ fun RimuGymScreen(
     viewModel: GymViewModel
 ) {
     val rutinasCargadas by viewModel.todasLasRutinas.collectAsState()
-
-    // FIX: El estado del entrenamiento viene del ViewModel — sobrevive a pantalla apagada
     val workoutState by viewModel.workoutState.collectAsState()
     val entrenandoActivo = workoutState != null
 
@@ -72,12 +69,7 @@ fun RimuGymScreen(
             IconButton(onClick = { navController.popBackStack() }) {
                 Icon(Icons.Default.ArrowBack, "Volver", tint = SecondaryText)
             }
-            Text(
-                "GYM PERFORMANCE",
-                color = SecondaryText,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text("GYM PERFORMANCE", color = SecondaryText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
 
         Column(
@@ -94,12 +86,7 @@ fun RimuGymScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(
-                        "SIN EXCUSAS",
-                        color = PrimaryText,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Black
-                    )
+                    Text("SIN EXCUSAS", color = PrimaryText, fontSize = 28.sp, fontWeight = FontWeight.Black)
                     Text(
                         text = "Día de ${getNombreRutina(diaSeleccionado, rutinasCargadas)}",
                         color = SecondaryText,
@@ -159,8 +146,8 @@ fun RimuGymScreen(
                 Text(
                     text = when {
                         entrenandoActivo -> "ENTRENAMIENTO EN CURSO..."
-                        hayEjercicios -> "COMENZAR ENTRENAMIENTO"
-                        else -> "CONFIGURA TU RUTINA"
+                        hayEjercicios    -> "COMENZAR ENTRENAMIENTO"
+                        else             -> "CONFIGURA TU RUTINA"
                     },
                     color = if (hayEjercicios && !entrenandoActivo) Color.White else Color.Gray,
                     fontWeight = FontWeight.ExtraBold,
@@ -171,7 +158,6 @@ fun RimuGymScreen(
         Spacer(modifier = Modifier.height(24.dp))
     }
 
-    // Sheet de configuración
     if (showConfigSheet) {
         ModalBottomSheet(
             onDismissRequest = { showConfigSheet = false },
@@ -184,11 +170,7 @@ fun RimuGymScreen(
                 onDiaSelect = { diaSeleccionado = it },
                 onSaveRutina = { nombre, ejercicios ->
                     viewModel.guardarRutina(
-                        RutinaDia(
-                            dia = diaSeleccionado,
-                            nombreRutina = nombre,
-                            ejercicios = ejercicios
-                        )
+                        RutinaDia(dia = diaSeleccionado, nombreRutina = nombre, ejercicios = ejercicios)
                     )
                     showConfigSheet = false
                 }
@@ -196,17 +178,13 @@ fun RimuGymScreen(
         }
     }
 
-    // Overlay del entrenamiento activo
-    // FIX: Usa workoutState del ViewModel — si la pantalla se apaga y vuelve, retoma donde estaba
+    // Al terminar el entrenamiento se guarda el resultado Y se marca el hábito de gym
     workoutState?.let { state ->
         ActiveWorkoutOverlay(
             workoutState = state,
-            onStateUpdate = { nuevoEstado ->
-                viewModel.actualizarWorkoutState(nuevoEstado)
-            },
+            onStateUpdate = { nuevoEstado -> viewModel.actualizarWorkoutState(nuevoEstado) },
             onFinish = { ejerciciosActualizados ->
-                viewModel.actualizarEjerciciosPostEntreno(diaSeleccionado, ejerciciosActualizados)
-                viewModel.finalizarEntrenamiento()
+                viewModel.finalizarEntrenamiento(diaSeleccionado, ejerciciosActualizados)
             }
         )
     }
