@@ -2,9 +2,9 @@ package com.example.zenithapp20
 
 import android.app.Application
 import androidx.work.*
-import com.example.zenithapp20.utils.NotificationHelper
-import com.example.zenithapp20.utils.RachaEnRiesgoWorker
-import com.example.zenithapp20.utils.RecordatorioMañanaWorker
+import com.example.zenithapp20.ui.utils.*
+import com.example.zenithapp20.ui.utils.`RecordatorioMañanaWorker`
+import com.example.zenithapp20.utils.BootReceiver
 import java.util.concurrent.TimeUnit
 import java.util.Calendar
 
@@ -13,53 +13,68 @@ class ZenithApp : Application() {
     override fun onCreate() {
         super.onCreate()
         NotificationHelper.crearCanales(this)
-        programarNotificaciones()
+        // Delegamos la programación al mismo método que usa el BootReceiver
+        // así no hay duplicación de lógica
+        BootReceiver.reprogramarNotificaciones(this)
     }
 
     private fun programarNotificaciones() {
-        val workManager = WorkManager.getInstance(this)
+        val wm = WorkManager.getInstance(this)
 
-        // RECORDATORIO MATUTINO — cada 24 horas con delay inicial hasta las 8:00 AM
-        val ahora = Calendar.getInstance()
-        val objetivo8am = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 8)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
+        fun delayHasta(horaObj: Int, minutoObj: Int = 0): Long {
+            val ahora = Calendar.getInstance()
+            val objetivo = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, horaObj)
+                set(Calendar.MINUTE, minutoObj)
+                set(Calendar.SECOND, 0)
+            }
+            if (ahora.after(objetivo)) objetivo.add(Calendar.DAY_OF_YEAR, 1)
+            return objetivo.timeInMillis - ahora.timeInMillis
         }
-        if (ahora.after(objetivo8am)) objetivo8am.add(Calendar.DAY_OF_YEAR, 1)
-        val delayMañana = objetivo8am.timeInMillis - ahora.timeInMillis
 
-        val recordatorioRequest = PeriodicWorkRequestBuilder<RecordatorioMañanaWorker>(
-            24, TimeUnit.HOURS
-        )
-            .setInitialDelay(delayMañana, TimeUnit.MILLISECONDS)
-            .addTag("recordatorio_mañana")
-            .build()
-
-        // ALERTA DE RACHA — cada 24 horas con delay inicial hasta las 9:00 PM
-        val objetivo9pm = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 21)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-        }
-        if (ahora.after(objetivo9pm)) objetivo9pm.add(Calendar.DAY_OF_YEAR, 1)
-        val delayNoche = objetivo9pm.timeInMillis - ahora.timeInMillis
-
-        val rachaRequest = PeriodicWorkRequestBuilder<RachaEnRiesgoWorker>(
-            15, TimeUnit.MINUTES
-        )
-            .addTag("racha_en_riesgo")
-            .build()
-
-        workManager.enqueueUniquePeriodicWork(
-            "recordatorio_mañana",
+        // 8:00 AM — Arranque motivacional
+        wm.enqueueUniquePeriodicWork(
+            "notif_mañana",
             ExistingPeriodicWorkPolicy.KEEP,
-            recordatorioRequest  // ← el worker que faltaba
+            PeriodicWorkRequestBuilder<`RecordatorioMañanaWorker`>(24, TimeUnit.HOURS)
+                .setInitialDelay(delayHasta(8), TimeUnit.MILLISECONDS)
+                .build()
         )
-        workManager.enqueueUniquePeriodicWork(
-            "racha_en_riesgo",
+
+        // 12:30 PM — Control de mediodía
+        wm.enqueueUniquePeriodicWork(
+            "notif_mediodia",
             ExistingPeriodicWorkPolicy.KEEP,
-            rachaRequest
+            PeriodicWorkRequestBuilder<NotificacionMedianodiaWorker>(24, TimeUnit.HOURS)
+                .setInitialDelay(delayHasta(12, 30), TimeUnit.MILLISECONDS)
+                .build()
+        )
+
+        // 5:00 PM — Empujón de tarde
+        wm.enqueueUniquePeriodicWork(
+            "notif_tarde",
+            ExistingPeriodicWorkPolicy.KEEP,
+            PeriodicWorkRequestBuilder<NotificacionTardeWorker>(24, TimeUnit.HOURS)
+                .setInitialDelay(delayHasta(17), TimeUnit.MILLISECONDS)
+                .build()
+        )
+
+        // 8:00 PM — Última llamada
+        wm.enqueueUniquePeriodicWork(
+            "notif_noche",
+            ExistingPeriodicWorkPolicy.KEEP,
+            PeriodicWorkRequestBuilder<NotificacionNocheWorker>(24, TimeUnit.HOURS)
+                .setInitialDelay(delayHasta(20), TimeUnit.MILLISECONDS)
+                .build()
+        )
+
+        // 10:30 PM — Aviso agresivo de racha (cada 15 min, filtra por hora internamente)
+        wm.enqueueUniquePeriodicWork(
+            "notif_racha",
+            ExistingPeriodicWorkPolicy.KEEP,
+            PeriodicWorkRequestBuilder<RachaEnRiesgoWorker>(15, TimeUnit.MINUTES)
+                .setInitialDelay(delayHasta(22, 30), TimeUnit.MILLISECONDS)
+                .build()
         )
     }
 }
