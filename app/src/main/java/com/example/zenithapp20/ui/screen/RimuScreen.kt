@@ -53,6 +53,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
+import androidx.compose.material.icons.filled.Dashboard
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -339,6 +340,15 @@ fun RimuHeader(fecha: Calendar, onFechaCambiada: (Calendar) -> Unit, navControll
                     .border(1.dp, CardBorderColor, CircleShape)
             ) {
                 Icon(Icons.Default.Settings, "Backup", tint = Color.White, modifier = Modifier.size(18.dp))
+            }
+            IconButton(
+                onClick = { navController.navigate("rimu_summary") },
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color.White.copy(alpha = 0.05f), CircleShape)
+                    .border(1.dp, CardBorderColor, CircleShape)
+            ) {
+                Icon(Icons.Default.Dashboard, "Resumen", tint = Color.White, modifier = Modifier.size(18.dp))
             }
         }
     }

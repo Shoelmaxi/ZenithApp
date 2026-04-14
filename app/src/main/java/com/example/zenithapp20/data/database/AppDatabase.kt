@@ -13,6 +13,7 @@ import com.example.zenithapp20.data.model.Habito
 import com.example.zenithapp20.data.model.Transaccion
 import com.example.zenithapp20.data.model.RutinaDia
 import com.example.zenithapp20.data.model.AgendaItem
+import com.example.zenithapp20.data.model.AguaRegistro
 import com.example.zenithapp20.data.model.TareaItem
 
 @Database(
@@ -21,9 +22,10 @@ import com.example.zenithapp20.data.model.TareaItem
         Transaccion::class,
         RutinaDia::class,
         AgendaItem::class,
-        TareaItem::class
+        TareaItem::class,
+        AguaRegistro::class
     ],
-    version = 3
+    version = 4
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -33,6 +35,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun gymDao(): GymDao
     abstract fun agendaDao(): AgendaDao
     abstract fun tareasDao(): TareasDao
+
+    abstract fun aguaDao(): AguaDao
 
     companion object {
 
@@ -94,6 +98,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+            CREATE TABLE agua (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                fechaMillis INTEGER NOT NULL,
+                cantidadMl INTEGER NOT NULL DEFAULT 250
+            )
+        """.trimIndent())
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 // Doble check dentro del bloque sincronizado
@@ -102,7 +118,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "zenith_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                     .also { INSTANCE = it }
             }

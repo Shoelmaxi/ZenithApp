@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.zenithapp20.data.database.AppDatabase
 import com.example.zenithapp20.ui.viewmodel.AgendaViewModel
+import com.example.zenithapp20.ui.viewmodel.AguaViewModel
 import com.example.zenithapp20.ui.viewmodel.FinanzasViewModel
 import com.example.zenithapp20.ui.viewmodel.GymViewModel
 import com.example.zenithapp20.ui.viewmodel.HabitosViewModel
@@ -27,6 +28,8 @@ class AppViewModelFactory(
                 AgendaViewModel(db.agendaDao()) as T
             modelClass.isAssignableFrom(TareasViewModel::class.java) ->
                 TareasViewModel(db.tareasDao()) as T
+            modelClass.isAssignableFrom(AguaViewModel::class.java) ->
+                AguaViewModel(db.aguaDao(), db.habitosDao()) as T
             // ------------------------------
             else -> throw IllegalArgumentException("ViewModel desconocido: ${modelClass.name}")
         }

@@ -16,8 +16,10 @@ import com.example.zenithapp20.ui.screen.RimuFinanceScreen
 import com.example.zenithapp20.ui.screen.RimuGymScreen
 import com.example.zenithapp20.ui.screen.RimuHabitsStatsScreen
 import com.example.zenithapp20.ui.screen.RimuScreen
+import com.example.zenithapp20.ui.screen.RimuSummaryScreen
 import com.example.zenithapp20.ui.screen.RimuWeekScreen
 import com.example.zenithapp20.ui.viewmodel.AgendaViewModel
+import com.example.zenithapp20.ui.viewmodel.AguaViewModel
 import com.example.zenithapp20.ui.viewmodel.FinanzasViewModel
 import com.example.zenithapp20.ui.viewmodel.GymViewModel
 import com.example.zenithapp20.ui.viewmodel.HabitosViewModel
@@ -83,6 +85,20 @@ fun AppNavigation() {
         }
         composable("rimu_backup") {
             RimuBackupScreen(navController = navController)
+        }
+
+        composable("rimu_summary") {
+            val habitosVM: HabitosViewModel = viewModel(factory = factory)
+            val agendaVM: AgendaViewModel = viewModel(factory = factory)
+            val finanzasVM: FinanzasViewModel = viewModel(factory = factory)
+            val aguaVM: AguaViewModel = viewModel(factory = factory)
+            RimuSummaryScreen(
+                navController = navController,
+                habitosViewModel = habitosVM,
+                agendaViewModel = agendaVM,
+                finanzasViewModel = finanzasVM,
+                aguaViewModel = aguaVM
+            )
         }
     }
 }
