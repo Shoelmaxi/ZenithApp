@@ -11,26 +11,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.zenithapp20.data.database.AppDatabase
-import com.example.zenithapp20.ui.screen.RimuBackupScreen
-import com.example.zenithapp20.ui.screen.RimuFinanceScreen
-import com.example.zenithapp20.ui.screen.RimuGymScreen
-import com.example.zenithapp20.ui.screen.RimuHabitsStatsScreen
-import com.example.zenithapp20.ui.screen.RimuScreen
-import com.example.zenithapp20.ui.screen.RimuSummaryScreen
-import com.example.zenithapp20.ui.screen.RimuWeekScreen
-import com.example.zenithapp20.ui.viewmodel.AgendaViewModel
-import com.example.zenithapp20.ui.viewmodel.AguaViewModel
-import com.example.zenithapp20.ui.viewmodel.FinanzasViewModel
-import com.example.zenithapp20.ui.viewmodel.GymViewModel
-import com.example.zenithapp20.ui.viewmodel.HabitosViewModel
-import com.example.zenithapp20.ui.viewmodel.TareasViewModel
+import com.example.zenithapp20.ui.screen.*
+import com.example.zenithapp20.ui.viewmodel.*
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    // 1. Inicializamos la base de datos y la fábrica de ViewModels
     val database = remember { AppDatabase.getDatabase(context) }
     val factory = remember { AppViewModelFactory(database, context) }
 
@@ -42,38 +30,33 @@ fun AppNavigation() {
         popEnterTransition = { fadeIn(animationSpec = tween(220)) },
         popExitTransition = { fadeOut(animationSpec = tween(180)) }
     ) {
-        // --- PANTALLA PRINCIPAL (HÁBITOS) ---
         composable("rimu_screen") {
             val habitosVM: HabitosViewModel = viewModel(factory = factory)
             val agendaVM: AgendaViewModel = viewModel(factory = factory)
             val tareasVM: TareasViewModel = viewModel(factory = factory)
-
             RimuScreen(
                 navController = navController,
-                habitosViewModel = habitosVM, // Asegúrate de usar los nombres de parámetros correctos
+                habitosViewModel = habitosVM,
                 agendaViewModel = agendaVM,
                 tareasViewModel = tareasVM
             )
         }
 
-        // --- PANTALLA DE ESTADÍSTICAS (HÁBITOS) ---
         composable("rimu_habits_stats") {
-            // Usamos el mismo ViewModel para que los datos sean consistentes
             val habitosVM: HabitosViewModel = viewModel(factory = factory)
             RimuHabitsStatsScreen(navController = navController, habitosViewModel = habitosVM)
         }
 
-        // --- PANTALLA DE GYM ---
         composable("rimu_gym") {
             val gymVM: GymViewModel = viewModel(factory = factory)
             RimuGymScreen(navController = navController, viewModel = gymVM)
         }
 
-        // --- PANTALLA DE FINANZAS ---
         composable("rimu_finance") {
             val finanzasVM: FinanzasViewModel = viewModel(factory = factory)
             RimuFinanceScreen(navController = navController, viewModel = finanzasVM)
         }
+
         composable("rimu_week") {
             val agendaVM: AgendaViewModel = viewModel(factory = factory)
             val habitosVM: HabitosViewModel = viewModel(factory = factory)
@@ -83,6 +66,7 @@ fun AppNavigation() {
                 habitosViewModel = habitosVM
             )
         }
+
         composable("rimu_backup") {
             RimuBackupScreen(navController = navController)
         }
@@ -98,6 +82,22 @@ fun AppNavigation() {
                 agendaViewModel = agendaVM,
                 finanzasViewModel = finanzasVM,
                 aguaViewModel = aguaVM
+            )
+        }
+
+        // ── LECTURA ──────────────────────────────────────────────────────────
+        composable("rimu_lectura") {
+            val lecturaVM: LecturaViewModel = viewModel(factory = factory)
+            RimuLecturaScreen(navController = navController, viewModel = lecturaVM)
+        }
+
+        composable("rimu_lectura_detail/{libroId}") { backStackEntry ->
+            val libroId = backStackEntry.arguments?.getString("libroId")?.toLongOrNull() ?: return@composable
+            val lecturaVM: LecturaViewModel = viewModel(factory = factory)
+            RimuLibroDetailScreen(
+                navController = navController,
+                libroId = libroId,
+                viewModel = lecturaVM
             )
         }
     }

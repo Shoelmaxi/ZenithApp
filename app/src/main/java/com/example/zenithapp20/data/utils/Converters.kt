@@ -8,20 +8,24 @@ import com.google.gson.reflect.TypeToken
 class Converters {
     private val gson = Gson()
 
-    // --- PARA ENUMS (Prioridad y TipoTransaccion) ---
-    @TypeConverter
-    fun fromPrioridad(prioridad: Prioridad): String = prioridad.name
+    // --- ENUMS EXISTENTES ---
+    @TypeConverter fun fromPrioridad(v: Prioridad): String = v.name
+    @TypeConverter fun toPrioridad(v: String): Prioridad = Prioridad.valueOf(v)
 
-    @TypeConverter
-    fun toPrioridad(value: String): Prioridad = Prioridad.valueOf(value)
+    @TypeConverter fun fromTipoTransaccion(v: TipoTransaccion): String = v.name
+    @TypeConverter fun toTipoTransaccion(v: String): TipoTransaccion = TipoTransaccion.valueOf(v)
 
-    @TypeConverter
-    fun fromTipoTransaccion(tipo: TipoTransaccion): String = tipo.name
+    @TypeConverter fun fromTipoAgenda(v: TipoAgenda): String = v.name
+    @TypeConverter fun toTipoAgenda(v: String): TipoAgenda = TipoAgenda.valueOf(v)
 
-    @TypeConverter
-    fun toTipoTransaccion(value: String): TipoTransaccion = TipoTransaccion.valueOf(value)
+    // --- ENUMS NUEVOS (Lectura) ---
+    @TypeConverter fun fromEstadoLibro(v: EstadoLibro): String = v.name
+    @TypeConverter fun toEstadoLibro(v: String): EstadoLibro = EstadoLibro.valueOf(v)
 
-    // --- PARA LISTAS SIMPLES (Agenda y Habitos) ---
+    @TypeConverter fun fromCategoriaLibro(v: CategoriaLibro): String = v.name
+    @TypeConverter fun toCategoriaLibro(v: String): CategoriaLibro = CategoriaLibro.valueOf(v)
+
+    // --- LISTAS SIMPLES ---
     @TypeConverter
     fun fromStringList(value: List<String>): String = gson.toJson(value)
 
@@ -40,7 +44,7 @@ class Converters {
         return gson.fromJson(value, listType)
     }
 
-    // --- PARA EL GYM (Estructura compleja de Ejercicios) ---
+    // --- GYM ---
     @TypeConverter
     fun fromEjercicioList(value: List<EjercicioGym>): String = gson.toJson(value)
 
@@ -49,9 +53,4 @@ class Converters {
         val listType = object : TypeToken<List<EjercicioGym>>() {}.type
         return gson.fromJson(value, listType)
     }
-    @TypeConverter
-    fun fromTipoAgenda(tipo: TipoAgenda): String = tipo.name
-
-    @TypeConverter
-    fun toTipoAgenda(value: String): TipoAgenda = TipoAgenda.valueOf(value)
 }

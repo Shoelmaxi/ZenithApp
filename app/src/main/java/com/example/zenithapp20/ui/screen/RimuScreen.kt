@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.BarChart
@@ -48,6 +47,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.runtime.collectAsState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -297,6 +299,7 @@ fun RimuHeader(fecha: Calendar, onFechaCambiada: (Calendar) -> Unit, navControll
             NavBtn(Icons.Default.BarChart,      "Estadísticas", "rimu_habits_stats"),
             NavBtn(Icons.Default.CalendarMonth, "Semana",       "rimu_week"),
             NavBtn(Icons.Default.Dashboard,     "Resumen",      "rimu_summary"),
+            NavBtn(Icons.AutoMirrored.Filled.MenuBook,      "Lectura",      "rimu_lectura"),
             NavBtn(Icons.Default.Settings,      "Backup",       "rimu_backup"),
         )
 

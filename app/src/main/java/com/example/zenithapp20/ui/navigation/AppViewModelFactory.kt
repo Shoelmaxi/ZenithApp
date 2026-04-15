@@ -4,12 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.zenithapp20.data.database.AppDatabase
-import com.example.zenithapp20.ui.viewmodel.AgendaViewModel
-import com.example.zenithapp20.ui.viewmodel.AguaViewModel
-import com.example.zenithapp20.ui.viewmodel.FinanzasViewModel
-import com.example.zenithapp20.ui.viewmodel.GymViewModel
-import com.example.zenithapp20.ui.viewmodel.HabitosViewModel
-import com.example.zenithapp20.ui.viewmodel.TareasViewModel
+import com.example.zenithapp20.ui.viewmodel.*
 
 class AppViewModelFactory(
     private val db: AppDatabase,
@@ -21,7 +16,6 @@ class AppViewModelFactory(
                 HabitosViewModel(db.habitosDao(), context) as T
             modelClass.isAssignableFrom(FinanzasViewModel::class.java) ->
                 FinanzasViewModel(db.finanzasDao()) as T
-            // GymViewModel ahora recibe también habitosDao para gestionar el hábito vinculado
             modelClass.isAssignableFrom(GymViewModel::class.java) ->
                 GymViewModel(db.gymDao(), db.habitosDao()) as T
             modelClass.isAssignableFrom(AgendaViewModel::class.java) ->
@@ -30,6 +24,8 @@ class AppViewModelFactory(
                 TareasViewModel(db.tareasDao()) as T
             modelClass.isAssignableFrom(AguaViewModel::class.java) ->
                 AguaViewModel(db.aguaDao(), db.habitosDao()) as T
+            modelClass.isAssignableFrom(LecturaViewModel::class.java) ->
+                LecturaViewModel(db.libroDao(), db.sesionLecturaDao(), db.habitosDao()) as T
             else -> throw IllegalArgumentException("ViewModel desconocido: ${modelClass.name}")
         }
     }
