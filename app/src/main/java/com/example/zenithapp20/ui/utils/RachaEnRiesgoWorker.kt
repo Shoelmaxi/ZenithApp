@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.zenithapp20.data.database.AppDatabase
+import com.example.zenithapp20.utils.MensajesNotificacion
 import java.util.Calendar
 
 class RachaEnRiesgoWorker(
@@ -35,17 +36,20 @@ class RachaEnRiesgoWorker(
 
         if (enRiesgo.isEmpty()) return Result.success()
 
-        val maxRacha = enRiesgo.maxOf { it.rachaDias }
-        val nombres = enRiesgo.take(2).joinToString(" y ") { "${it.nombre} (${it.rachaDias}d)" }
+        val (titulo, mensaje) = MensajesNotificacion.obtenerMensaje(
+            context = applicationContext,
+            pool = MensajesNotificacion.mensajesUltimoAviso,
+            poolKey = "ultimo_aviso"
+        )
 
-        val titulo = when {
-            maxRacha >= 30 -> "💀 $maxRacha días se van a perder esta noche"
-            maxRacha >= 14 -> "🚨 Son las 10:30 PM — $maxRacha días en juego"
-            else -> "⏰ Último aviso del día"
-        }
-
-        val mensaje = "Quedan menos de 90 minutos. ${enRiesgo.size} racha${if (enRiesgo.size != 1) "s" else ""} se romperá${if (enRiesgo.size != 1) "n" else ""} a medianoche: $nombres. No dejes que el sueño te haga perder lo que construiste."
-
+        NotificationHelper.mostrarNotificacion(
+            context = applicationContext,
+            id = 1002,
+            canal = NotificationHelper.CHANNEL_URGENTE,
+            titulo = titulo,
+            mensaje = mensaje,
+            esUrgente = true
+        )
         NotificationHelper.mostrarNotificacion(
             context = applicationContext,
             id = 1002,

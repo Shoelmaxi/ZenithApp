@@ -15,4 +15,8 @@ interface FinanzasDao {
 
     @Delete
     suspend fun deleteTransaccion(transaccion: Transaccion)
+
+    // En FinanzasDao.kt — agrega esta línea
+    @Query("SELECT * FROM finanzas")
+    suspend fun getAllTransaccionesSync(): List<Transaccion>
 }

@@ -68,6 +68,33 @@ class BootReceiver : BroadcastReceiver() {
                     .setInitialDelay(delayHasta(22, 30), TimeUnit.MILLISECONDS)
                     .build()
             )
+
+            // FINANZAS — cada 12 horas (dispara a las 10 AM y 10 PM, el worker filtra por hora internamente)
+            wm.enqueueUniquePeriodicWork(
+                "notif_finanzas",
+                ExistingPeriodicWorkPolicy.REPLACE,
+                PeriodicWorkRequestBuilder<NotificacionFinanzasWorker>(12, TimeUnit.HOURS)
+                    .setInitialDelay(delayHasta(10), TimeUnit.MILLISECONDS)
+                    .build()
+            )
+
+// GYM — cada 8 horas (dispara a las 9 AM y 5 PM, el worker filtra internamente)
+            wm.enqueueUniquePeriodicWork(
+                "notif_gym",
+                ExistingPeriodicWorkPolicy.REPLACE,
+                PeriodicWorkRequestBuilder<NotificacionGymWorker>(8, TimeUnit.HOURS)
+                    .setInitialDelay(delayHasta(9), TimeUnit.MILLISECONDS)
+                    .build()
+            )
+
+// AGUA — cada 2 horas entre las 8 AM y 9 PM
+            wm.enqueueUniquePeriodicWork(
+                "notif_agua",
+                ExistingPeriodicWorkPolicy.REPLACE,
+                PeriodicWorkRequestBuilder<NotificacionAguaWorker>(2, TimeUnit.HOURS)
+                    .setInitialDelay(delayHasta(8), TimeUnit.MILLISECONDS)
+                    .build()
+            )
         }
     }
 }

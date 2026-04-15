@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.zenithapp20.data.database.AppDatabase
+import com.example.zenithapp20.utils.MensajesNotificacion
 import java.util.Calendar
 
 class NotificacionNocheWorker(
@@ -29,34 +30,37 @@ class NotificacionNocheWorker(
         }
 
         if (pendientes.isEmpty()) {
-            // ¡Todo completado! Refuerzo positivo
+            val (titulo, mensaje) = MensajesNotificacion.obtenerMensaje(
+                context = applicationContext,
+                pool = MensajesNotificacion.mensajesExito,
+                poolKey = "exito"
+            )
             NotificationHelper.mostrarNotificacion(
                 context = applicationContext,
                 id = 1005,
                 canal = NotificationHelper.CHANNEL_MAÑANA,
-                titulo = "✅ Día perfecto",
-                mensaje = "Completaste todos tus hábitos hoy. Eso es disciplina real. Vuelve mañana y sigue construyendo."
+                titulo = titulo,
+                mensaje = mensaje
             )
             return Result.success()
         }
 
         val enRiesgo = pendientes.filter { it.rachaDias > 0 }
-        val maxRacha = enRiesgo.maxOfOrNull { it.rachaDias } ?: 0
 
-        val (titulo, mensaje) = when {
-            maxRacha >= 14 -> Pair(
-                "🚨 $maxRacha días de racha a punto de romperse",
-                "Llevas $maxRacha días seguidos y esta noche podrías perderlo todo. Abre Zenith ahora. Te toma menos de un minuto marcar tus hábitos."
-            )
-            enRiesgo.isNotEmpty() -> Pair(
-                "🔥 Última oportunidad — rachas en riesgo",
-                "${enRiesgo.size} racha${if (enRiesgo.size != 1) "s" else ""} a punto de romperse: ${enRiesgo.take(2).joinToString(", ") { "${it.nombre} (${it.rachaDias}d)" }}. Son las 8 PM. No lo dejes para las 11."
-            )
-            else -> Pair(
-                "🌙 Quedan pocas horas",
-                "${pendientes.size} hábitos sin completar hoy. Mañana no cuenta. Abre la app y cierra el día como corresponde."
-            )
-        }
+        val (titulo, mensaje) = MensajesNotificacion.obtenerMensaje(
+            context = applicationContext,
+            pool = MensajesNotificacion.mensajesNoche,
+            poolKey = "noche"
+        )
+
+        NotificationHelper.mostrarNotificacion(
+            context = applicationContext,
+            id = 1005,
+            canal = NotificationHelper.CHANNEL_URGENTE,
+            titulo = titulo,
+            mensaje = mensaje,
+            esUrgente = enRiesgo.isNotEmpty()
+        )
 
         NotificationHelper.mostrarNotificacion(
             context = applicationContext,

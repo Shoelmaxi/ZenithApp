@@ -70,6 +70,39 @@ object MensajesNotificacion {
         Pair("✨ Lo hiciste de nuevo", "Un día más en la lista. Cada uno cuenta. Descansa bien.")
     )
 
+    val mensajesFinanzas = listOf(
+        Pair("💰 ¿Ya registraste tus movimientos?", "Mantener el control de tu dinero es un hábito como cualquier otro. Abre Zenith y anota lo que gastaste o ingresaste hoy."),
+        Pair("📊 Tu balance de hoy está incompleto", "Sin registros no hay control. 30 segundos en Zenith pueden ahorrarte muchas sorpresas a fin de mes."),
+        Pair("🧾 Finanzas al día", "Los que controlan su dinero no son los que más ganan, son los que más registran. ¿Ya anotaste el de hoy?"),
+        Pair("💳 ¿Gastaste algo hoy?", "Anótalo antes de que se te olvide. Un registro ahora vale más que intentar recordar después."),
+        Pair("📈 Tu historial financiero te espera", "Cada movimiento que no registras es información perdida. Abre Zenith y mantén el control."),
+        Pair("🏦 Control financiero", "No se trata de cuánto ganas, sino de cuánto sabes a dónde va. ¿Ya registraste tus movimientos de hoy?"),
+        Pair("💡 Recordatorio de finanzas", "Los mejores meses financieros empiezan con buenos registros diarios. El tuyo empieza ahora."),
+        Pair("📉 ¿Sabes cuánto llevas gastado hoy?", "Si no lo has registrado, probablemente más de lo que crees. Abre Zenith y compruébalo.")
+    )
+
+    val mensajesGym = listOf(
+        Pair("💪 ¿Ya entrenaste hoy?", "Tu rutina te espera. Cada sesión que completas es un ladrillo más en lo que estás construyendo."),
+        Pair("🏋️ El gym no va a ir a ti", "Tienes una rutina configurada. Abre Zenith, inicia el entrenamiento y cierra el día sin excusas."),
+        Pair("⚡ Recordatorio de entrenamiento", "La disciplina del gym se transfiere a todo lo demás. ¿Ya completaste tu rutina de hoy?"),
+        Pair("🎯 Tu entrenamiento pendiente", "No tienes que tener ganas. Solo tienes que aparecer. Abre Zenith y empieza."),
+        Pair("🔥 Sin excusas", "Llevas rachas en otros hábitos. El gym no debería ser diferente. ¿Ya entrenaste?"),
+        Pair("💥 El mejor momento para entrenar", "Es ahora. El segundo mejor también. Abre Zenith y empieza tu rutina."),
+        Pair("🏆 Consistencia > Intensidad", "No hace falta que sea el mejor entrenamiento de tu vida. Solo tiene que pasar. ¿Ya fue?"),
+        Pair("🩺 Tu cuerpo te lo agradecerá", "Y tu racha también. Entra a Zenith y completa tu rutina de hoy.")
+    )
+
+    val mensajesAgua = listOf(
+        Pair("💧 ¿Tomaste agua?", "La hidratación no se acumula para después. Toma un vaso ahora y registralo en Zenith."),
+        Pair("🥤 Recordatorio de hidratación", "Tu cuerpo necesita agua ahora, no más tarde. ¿Cuántos vasos llevas hoy?"),
+        Pair("💦 Hidratación pendiente", "Si no recuerdas cuándo fue el último vaso, ya es hora del siguiente. Abre Zenith."),
+        Pair("🌊 Agua = energía", "El cansancio de media tarde muchas veces es deshidratación. Toma un vaso y márcalo."),
+        Pair("💧 ¿Ya van 8 vasos?", "Revisa tu progreso en Zenith. Si no, este es el recordatorio para el siguiente."),
+        Pair("🥛 Un vaso ahora", "Eso es todo. Sin excusas. Toma agua, regístrala en Zenith, sigue con tu día."),
+        Pair("⚡ Hidratación al día", "Los hábitos pequeños hacen la diferencia. Un vaso de agua es el más fácil de todos."),
+        Pair("🫧 Tu meta de agua te espera", "Cada vaso cuenta. Abre Zenith, suma uno más y sigue adelante.")
+    )
+
     // --- SELECTOR ALEATORIO CON MEMORIA (no repite el último) ---
     private val prefs_key_prefix = "last_msg_index_"
 
