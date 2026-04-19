@@ -13,16 +13,13 @@ import com.example.zenithapp20.data.model.*
 
 @Database(
     entities = [
-        Habito::class,
-        Transaccion::class,
-        RutinaDia::class,
-        AgendaItem::class,
-        TareaItem::class,
-        AguaRegistro::class,
-        Libro::class,
-        SesionLectura::class
+        Habito::class, Transaccion::class, RutinaDia::class,
+        AgendaItem::class, TareaItem::class, AguaRegistro::class,
+        Libro::class, SesionLectura::class,
+        AnalisisHabito::class, SesionDeepWork::class,       // NUEVO
+        RegistroResiliencia::class, ReflexionDiaria::class  // NUEVO
     ],
-    version = 7   // ← Bumped de 6 a 7 (añadimos descripcion en habitos)
+    version = 8
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -35,6 +32,11 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun aguaDao(): AguaDao
     abstract fun libroDao(): LibroDao
     abstract fun sesionLecturaDao(): SesionLecturaDao
+
+    abstract fun analisisHabitoDao(): AnalisisHabitoDao
+    abstract fun deepWorkDao(): DeepWorkDao
+    abstract fun resilienciaDao(): ResilienciaDao
+    abstract fun reflexionDao(): ReflexionDao
 
     companion object {
 
@@ -146,6 +148,50 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+            CREATE TABLE analisis_habito (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                habitoId INTEGER NOT NULL,
+                habitoNombre TEXT NOT NULL,
+                focusLevel INTEGER NOT NULL,
+                frictionFactor TEXT NOT NULL,
+                adjustmentNote TEXT NOT NULL DEFAULT '',
+                fechaMillis INTEGER NOT NULL
+            )
+        """.trimIndent())
+                database.execSQL("""
+            CREATE TABLE sesiones_deep_work (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                duracionObjetivoMin INTEGER NOT NULL,
+                duracionRealSegundos INTEGER NOT NULL,
+                distracciones INTEGER NOT NULL,
+                calidadSesion REAL NOT NULL,
+                fechaMillis INTEGER NOT NULL
+            )
+        """.trimIndent())
+                database.execSQL("""
+            CREATE TABLE registros_resiliencia (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                fechaDia INTEGER NOT NULL,
+                duchaFria INTEGER NOT NULL DEFAULT 0,
+                ayunoDopamina INTEGER NOT NULL DEFAULT 0,
+                entrenamientoResistencia INTEGER NOT NULL DEFAULT 0
+            )
+        """.trimIndent())
+                database.execSQL("""
+            CREATE TABLE reflexiones_diarias (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                fechaMillis INTEGER NOT NULL,
+                movimientoMaestro TEXT NOT NULL,
+                puntoCiego TEXT NOT NULL,
+                aperturaMañana TEXT NOT NULL
+            )
+        """.trimIndent())
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -153,14 +199,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "zenith_database"
                 )
-                    .addMigrations(
-                        MIGRATION_1_2,
-                        MIGRATION_2_3,
-                        MIGRATION_3_4,
-                        MIGRATION_4_5,
-                        MIGRATION_5_6,
-                        MIGRATION_6_7
-                    )
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4,
+                        MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                     .build()
                     .also { INSTANCE = it }
             }

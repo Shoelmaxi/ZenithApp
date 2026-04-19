@@ -34,11 +34,13 @@ fun AppNavigation() {
             val habitosVM: HabitosViewModel = viewModel(factory = factory)
             val agendaVM: AgendaViewModel = viewModel(factory = factory)
             val tareasVM: TareasViewModel = viewModel(factory = factory)
+            val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)  // NUEVO
             RimuScreen(
                 navController = navController,
                 habitosViewModel = habitosVM,
                 agendaViewModel = agendaVM,
-                tareasViewModel = tareasVM
+                tareasViewModel = tareasVM,
+                icViewModel = icVM  // NUEVO
             )
         }
 
@@ -99,6 +101,27 @@ fun AppNavigation() {
                 libroId = libroId,
                 viewModel = lecturaVM
             )
+        }
+
+        composable("rimu_sistema") {
+            val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)
+            RimuSistemaScreen(navController = navController, viewModel = icVM)
+        }
+        composable("rimu_deep_work") {
+            val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)
+            RimuDeepWorkScreen(navController = navController, viewModel = icVM)
+        }
+        composable("rimu_resiliencia") {
+            val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)
+            RimuResilienciaScreen(navController = navController, viewModel = icVM)
+        }
+        composable("rimu_reflexion") {
+            val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)
+            RimuReflexionScreen(navController = navController, viewModel = icVM)
+        }
+        composable("rimu_sueno") {
+            val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)
+            RimuSuenoScreen(navController = navController, viewModel = icVM)
         }
     }
 }

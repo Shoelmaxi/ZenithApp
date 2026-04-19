@@ -26,6 +26,14 @@ class AppViewModelFactory(
                 AguaViewModel(db.aguaDao(), db.habitosDao()) as T
             modelClass.isAssignableFrom(LecturaViewModel::class.java) ->
                 LecturaViewModel(db.libroDao(), db.sesionLecturaDao(), db.habitosDao()) as T
+            modelClass.isAssignableFrom(IngenieriaConductualViewModel::class.java) ->
+                IngenieriaConductualViewModel(
+                    db.analisisHabitoDao(),
+                    db.deepWorkDao(),
+                    db.resilienciaDao(),
+                    db.reflexionDao(),
+                    context
+                ) as T
             else -> throw IllegalArgumentException("ViewModel desconocido: ${modelClass.name}")
         }
     }

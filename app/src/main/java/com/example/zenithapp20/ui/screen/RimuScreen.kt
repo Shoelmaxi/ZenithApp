@@ -51,7 +51,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.runtime.collectAsState
+import com.example.zenithapp20.ui.viewmodel.IngenieriaConductualViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -59,7 +61,8 @@ fun RimuScreen(
     navController: NavController,
     agendaViewModel: AgendaViewModel,
     tareasViewModel: TareasViewModel,
-    habitosViewModel: HabitosViewModel
+    habitosViewModel: HabitosViewModel,
+    icViewModel: IngenieriaConductualViewModel   // NUEVO
 ) {
     val listaAgenda  by agendaViewModel.agendaFiltrada.collectAsState()
     val listaTareas  by tareasViewModel.tareasFiltradas.collectAsState()
@@ -68,6 +71,8 @@ fun RimuScreen(
     var agendaAEditar by remember { mutableStateOf<AgendaItem?>(null) }
     var tareaAEditar  by remember { mutableStateOf<TareaItem?>(null) }
     var habitoAEditar by remember { mutableStateOf<Habito?>(null) }
+
+    var habitoParaAnalisis by remember { mutableStateOf<Habito?>(null) }
 
     // ── Estados para los diálogos de INFO ──────────────────────────────────
     var habitoInfo  by remember { mutableStateOf<Habito?>(null) }
@@ -201,12 +206,17 @@ fun RimuScreen(
                                         habito, fechaSeleccionada.timeInMillis
                                     ),
                                     onCheckClick = {
-                                        habitosViewModel.toggleCheckEnFecha(
+                                        val estabaCompletado = habitosViewModel.verificarSiCompletadoEnFecha(
                                             habito, fechaSeleccionada.timeInMillis
                                         )
+                                        habitosViewModel.toggleCheckEnFecha(habito, fechaSeleccionada.timeInMillis)
+                                        // Solo muestra AAA si acabas de COMPLETAR (no si desmarcas)
+                                        if (!estabaCompletado) {
+                                            habitoParaAnalisis = habito
+                                        }
                                     },
                                     onLongClick = { habitoAEditar = habito; showHabitoSheet = true },
-                                    onInfoClick = { habitoInfo = habito }  // ← INFO
+                                    onInfoClick = { habitoInfo = habito }
                                 )
                             }
                         }
@@ -247,6 +257,22 @@ fun RimuScreen(
             }
         }
         Spacer(modifier = Modifier.height(24.dp))
+    }
+
+    habitoParaAnalisis?.let { habito ->
+        ModalBottomSheet(
+            onDismissRequest = { habitoParaAnalisis = null },
+            containerColor = MainCardBackground
+        ) {
+            AnalisisAAASheet(
+                habito = habito,
+                onSave = { analisis ->
+                    icViewModel.guardarAnalisis(analisis)
+                    habitoParaAnalisis = null
+                },
+                onSkip = { habitoParaAnalisis = null }
+            )
+        }
     }
 
     // ── MODALS DE EDICIÓN ──────────────────────────────────────────────────
@@ -393,6 +419,7 @@ fun RimuHeader(
             NavBtn(Icons.Default.CalendarMonth,     "Semana",       "rimu_week"),
             NavBtn(Icons.Default.Dashboard,         "Resumen",      "rimu_summary"),
             NavBtn(Icons.AutoMirrored.Filled.MenuBook, "Lectura",   "rimu_lectura"),
+            NavBtn(Icons.Default.Bolt, "Sistema", "rimu_sistema"),
             //NavBtn(Icons.Default.Settings,          "Backup",       "rimu_backup"),
         )
 
