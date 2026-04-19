@@ -15,6 +15,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,18 +30,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.zenithapp20.data.model.Habito
+import com.example.zenithapp20.ui.theme.CardBorderColor
+import com.example.zenithapp20.ui.theme.SecondaryText
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun HabitoForm(
-    habitoAEditar: Habito? = null, // Parámetro nuevo para soportar edición
+    habitoAEditar: Habito? = null,
     onSave: (Habito) -> Unit
 ) {
-    // Inicializamos los estados con los valores del hábito si estamos editando
-    var nombreHabito by remember { mutableStateOf(habitoAEditar?.nombre ?: "") }
-    var meta by remember { mutableStateOf(habitoAEditar?.meta ?: "") }
+    var nombreHabito   by remember { mutableStateOf(habitoAEditar?.nombre      ?: "") }
+    var descripcion    by remember { mutableStateOf(habitoAEditar?.descripcion  ?: "") }
+    var meta           by remember { mutableStateOf(habitoAEditar?.meta         ?: "") }
     var categoriaSeleccionada by remember { mutableStateOf(habitoAEditar?.categoria ?: "Salud") }
-    var nombreError by remember { mutableStateOf(false) }
+    var nombreError    by remember { mutableStateOf(false) }
 
     val categoriasDisponibles = listOf("Salud", "Mente", "Productividad", "Social", "Hogar")
 
@@ -58,23 +62,59 @@ fun HabitoForm(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Campo Nombre
+        // ── NOMBRE ─────────────────────────────────────────────────────────
         CustomTextField(
             value = nombreHabito,
-            onValueChange = {
-                nombreHabito = it
-                nombreError = false
-            },
+            onValueChange = { nombreHabito = it; nombreError = false },
             label = "Nombre del Hábito (ej: Meditar)"
         )
         if (nombreError) {
             Text("El nombre es obligatorio", color = Color.Red, fontSize = 11.sp)
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // ── DESCRIPCIÓN ────────────────────────────────────────────────────
+        // Campo clave: aquí el usuario escribe QUÉ tiene que hacer exactamente.
+        // Al tocar la card del hábito en la pantalla principal, verá este texto.
+        OutlinedTextField(
+            value = descripcion,
+            onValueChange = { if (it.length <= 300) descripcion = it },
+            label = { Text("Descripción / ¿Qué debo hacer?", color = SecondaryText) },
+            placeholder = {
+                Text(
+                    "Ej: Meditar 10 min con la app Headspace, posición de loto, sin teléfono.",
+                    color = SecondaryText.copy(0.4f),
+                    fontSize = 12.sp
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 2,
+            maxLines = 4,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor    = Color.White,
+                unfocusedTextColor  = Color.White,
+                focusedBorderColor  = Color(0xFF4CAF50),
+                unfocusedBorderColor = CardBorderColor,
+                focusedLabelColor   = Color(0xFF4CAF50),
+                unfocusedLabelColor = SecondaryText,
+                cursorColor         = Color(0xFF4CAF50)
+            ),
+            shape = RoundedCornerShape(12.dp),
+            supportingText = {
+                if (descripcion.isNotBlank()) {
+                    Text(
+                        "${descripcion.length}/300",
+                        color = SecondaryText,
+                        fontSize = 10.sp
+                    )
+                }
+            }
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Campo Meta
+        // ── META ───────────────────────────────────────────────────────────
         CustomTextField(
             value = meta,
             onValueChange = { meta = it },
@@ -83,7 +123,13 @@ fun HabitoForm(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text("CATEGORÍA DE DISCIPLINA", color = Color.White.copy(0.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        // ── CATEGORÍA ──────────────────────────────────────────────────────
+        Text(
+            "CATEGORÍA DE DISCIPLINA",
+            color = Color.White.copy(0.5f),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
         Spacer(modifier = Modifier.height(12.dp))
 
         FlowRow(
@@ -115,46 +161,41 @@ fun HabitoForm(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Botón Guardar / Actualizar
+        // ── GUARDAR ────────────────────────────────────────────────────────
         Button(
             onClick = {
                 if (nombreHabito.isNotEmpty()) {
                     nombreError = false
-                    // LÓGICA DE PERSISTENCIA:
                     val habitoFinal = if (habitoAEditar != null) {
-                        // Mantenemos ID y Checks, solo cambiamos datos del form
                         habitoAEditar.copy(
-                            nombre = nombreHabito,
-                            meta = meta,
-                            categoria = categoriaSeleccionada
+                            nombre      = nombreHabito,
+                            descripcion = descripcion,
+                            meta        = meta,
+                            categoria   = categoriaSeleccionada
                         )
                     } else {
-                        nombreError = false
-                        // Es un hábito nuevo
                         Habito(
-                            nombre = nombreHabito,
-                            meta = meta,
-                            categoria = categoriaSeleccionada,
-                            checks = emptyList(),
-                            icono = "🔥"
+                            nombre      = nombreHabito,
+                            descripcion = descripcion,
+                            meta        = meta,
+                            categoria   = categoriaSeleccionada,
+                            checks      = emptyList(),
+                            icono       = "🔥"
                         )
                     }
-
                     onSave(habitoFinal)
-
-                    // Solo limpiamos si es creación nueva
                     if (habitoAEditar == null) {
-                        nombreHabito = ""; meta = ""
+                        nombreHabito = ""; descripcion = ""; meta = ""
                     }
+                } else {
+                    nombreError = true
                 }
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
                 .border(1.dp, Color.White.copy(0.1f), RoundedCornerShape(16.dp)),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF00C853)
-            ),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
             shape = RoundedCornerShape(16.dp)
         ) {
             Text(

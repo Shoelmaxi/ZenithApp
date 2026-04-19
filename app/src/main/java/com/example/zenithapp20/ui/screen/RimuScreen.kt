@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
@@ -36,6 +37,7 @@ import com.example.zenithapp20.data.model.AgendaItem
 import com.example.zenithapp20.data.model.Habito
 import com.example.zenithapp20.data.model.Prioridad
 import com.example.zenithapp20.data.model.TareaItem
+import com.example.zenithapp20.data.model.TipoAgenda
 import com.example.zenithapp20.ui.components.*
 import com.example.zenithapp20.ui.theme.*
 import com.example.zenithapp20.ui.viewmodel.AgendaViewModel
@@ -49,7 +51,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.runtime.collectAsState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -60,21 +61,26 @@ fun RimuScreen(
     tareasViewModel: TareasViewModel,
     habitosViewModel: HabitosViewModel
 ) {
-    val listaAgenda by agendaViewModel.agendaFiltrada.collectAsState()
-    val listaTareas by tareasViewModel.tareasFiltradas.collectAsState()
+    val listaAgenda  by agendaViewModel.agendaFiltrada.collectAsState()
+    val listaTareas  by tareasViewModel.tareasFiltradas.collectAsState()
     val listaHabitos by habitosViewModel.habitos.collectAsState()
 
     var agendaAEditar by remember { mutableStateOf<AgendaItem?>(null) }
-    var tareaAEditar by remember { mutableStateOf<TareaItem?>(null) }
+    var tareaAEditar  by remember { mutableStateOf<TareaItem?>(null) }
     var habitoAEditar by remember { mutableStateOf<Habito?>(null) }
+
+    // ── Estados para los diálogos de INFO ──────────────────────────────────
+    var habitoInfo  by remember { mutableStateOf<Habito?>(null) }
+    var agendaInfo  by remember { mutableStateOf<AgendaItem?>(null) }
+    var tareaInfo   by remember { mutableStateOf<TareaItem?>(null) }
 
     var fechaSeleccionada by remember { mutableStateOf(Calendar.getInstance()) }
 
     val diaSemanaActual = remember(fechaSeleccionada) {
         val diasMap = mapOf(
-            Calendar.MONDAY to "L", Calendar.TUESDAY to "M", Calendar.WEDNESDAY to "X",
-            Calendar.THURSDAY to "J", Calendar.FRIDAY to "V", Calendar.SATURDAY to "S",
-            Calendar.SUNDAY to "D"
+            Calendar.MONDAY    to "L", Calendar.TUESDAY  to "M", Calendar.WEDNESDAY to "X",
+            Calendar.THURSDAY  to "J", Calendar.FRIDAY   to "V", Calendar.SATURDAY  to "S",
+            Calendar.SUNDAY    to "D"
         )
         val dia = diasMap[fechaSeleccionada.get(Calendar.DAY_OF_WEEK)] ?: ""
         agendaViewModel.cambiarDia(dia)
@@ -94,9 +100,9 @@ fun RimuScreen(
         agendaViewModel.cambiarFecha(inicioDiaSeleccionado)
     }
 
-    var showAgendaSheet by remember { mutableStateOf(false) }
-    var showTareaSheet by remember { mutableStateOf(false) }
-    var showHabitoSheet by remember { mutableStateOf(false) }
+    var showAgendaSheet  by remember { mutableStateOf(false) }
+    var showTareaSheet   by remember { mutableStateOf(false) }
+    var showHabitoSheet  by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -127,8 +133,13 @@ fun RimuScreen(
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(bottom = 20.dp)
             ) {
-                // AGENDA
-                item { SeccionHeader(titulo = "AGENDA", onAddClick = { agendaAEditar = null; showAgendaSheet = true }) }
+                // ── AGENDA ─────────────────────────────────────────────────
+                item {
+                    SeccionHeader(
+                        titulo = "AGENDA",
+                        onAddClick = { agendaAEditar = null; showAgendaSheet = true }
+                    )
+                }
                 if (listaAgenda.isEmpty()) {
                     item { EmptyStateText("No hay eventos para este día") }
                 } else {
@@ -137,11 +148,23 @@ fun RimuScreen(
                             mensajeConfirmacion = "Se eliminará el evento '${item.nombre}'.",
                             onDelete = { agendaViewModel.eliminarItem(item) }
                         ) {
-                            Box(modifier = Modifier.combinedClickable(
-                                onClick = { agendaViewModel.toggleCompletado(item, diaSemanaActual) },
-                                onLongClick = { agendaAEditar = item; showAgendaSheet = true }
-                            )) {
-                                RimuAgendaItem(item = item, isLast = false, diaActual = diaSemanaActual)
+                            Box(
+                                modifier = Modifier.combinedClickable(
+                                    onClick = {
+                                        agendaViewModel.toggleCompletado(item, diaSemanaActual)
+                                    },
+                                    onLongClick = {
+                                        agendaAEditar = item
+                                        showAgendaSheet = true
+                                    }
+                                )
+                            ) {
+                                RimuAgendaItem(
+                                    item = item,
+                                    isLast = false,
+                                    diaActual = diaSemanaActual,
+                                    onInfoClick = { agendaInfo = item }   // ← INFO
+                                )
                             }
                         }
                     }
@@ -149,8 +172,13 @@ fun RimuScreen(
 
                 item { Spacer(modifier = Modifier.height(24.dp)) }
 
-                // HÁBITOS
-                item { SeccionHeader(titulo = "HÁBITOS DE HOY", onAddClick = { habitoAEditar = null; showHabitoSheet = true }) }
+                // ── HÁBITOS ────────────────────────────────────────────────
+                item {
+                    SeccionHeader(
+                        titulo = "HÁBITOS DE HOY",
+                        onAddClick = { habitoAEditar = null; showHabitoSheet = true }
+                    )
+                }
                 if (listaHabitos.isEmpty()) {
                     item { EmptyStateText("Agrega un hábito para empezar") }
                 } else {
@@ -173,9 +201,12 @@ fun RimuScreen(
                                         habito, fechaSeleccionada.timeInMillis
                                     ),
                                     onCheckClick = {
-                                        habitosViewModel.toggleCheckEnFecha(habito, fechaSeleccionada.timeInMillis)
+                                        habitosViewModel.toggleCheckEnFecha(
+                                            habito, fechaSeleccionada.timeInMillis
+                                        )
                                     },
-                                    onLongClick = { habitoAEditar = habito; showHabitoSheet = true }
+                                    onLongClick = { habitoAEditar = habito; showHabitoSheet = true },
+                                    onInfoClick = { habitoInfo = habito }  // ← INFO
                                 )
                             }
                         }
@@ -184,8 +215,13 @@ fun RimuScreen(
 
                 item { Spacer(modifier = Modifier.height(24.dp)) }
 
-                // TAREAS
-                item { SeccionHeader(titulo = "TAREAS", onAddClick = { tareaAEditar = null; showTareaSheet = true }) }
+                // ── TAREAS ─────────────────────────────────────────────────
+                item {
+                    SeccionHeader(
+                        titulo = "TAREAS",
+                        onAddClick = { tareaAEditar = null; showTareaSheet = true }
+                    )
+                }
                 if (listaTareas.isEmpty()) {
                     item { EmptyStateText("Sin tareas pendientes") }
                 } else {
@@ -194,11 +230,16 @@ fun RimuScreen(
                             mensajeConfirmacion = "Se eliminará la tarea '${tarea.nombre}'.",
                             onDelete = { tareasViewModel.eliminarTarea(tarea) }
                         ) {
-                            Box(modifier = Modifier.combinedClickable(
-                                onClick = { tareasViewModel.toggleCompletada(tarea) },
-                                onLongClick = { tareaAEditar = tarea; showTareaSheet = true }
-                            )) {
-                                RimuTareaItem(tarea = tarea)
+                            Box(
+                                modifier = Modifier.combinedClickable(
+                                    onClick  = { tareasViewModel.toggleCompletada(tarea) },
+                                    onLongClick = { tareaAEditar = tarea; showTareaSheet = true }
+                                )
+                            ) {
+                                RimuTareaItem(
+                                    tarea = tarea,
+                                    onInfoClick = { tareaInfo = tarea }  // ← INFO
+                                )
                             }
                         }
                     }
@@ -208,7 +249,8 @@ fun RimuScreen(
         Spacer(modifier = Modifier.height(24.dp))
     }
 
-    // MODALS
+    // ── MODALS DE EDICIÓN ──────────────────────────────────────────────────
+
     if (showHabitoSheet) {
         ModalBottomSheet(
             onDismissRequest = { showHabitoSheet = false; habitoAEditar = null },
@@ -260,14 +302,67 @@ fun RimuScreen(
             )
         }
     }
+
+    // ── DIÁLOGOS DE INFO ──────────────────────────────────────────────────
+
+    habitoInfo?.let { h ->
+        ItemInfoDialog(
+            titulo      = h.nombre,
+            descripcion = h.descripcion,
+            detalles    = buildList {
+                add("META"       to h.meta)
+                add("CATEGORÍA"  to h.categoria)
+                if (h.rachaDias > 0) {
+                    add("RACHA ACTIVA" to "${h.rachaDias} día${if (h.rachaDias > 1) "s" else ""} seguido${if (h.rachaDias > 1) "s" else ""} 🔥")
+                }
+            },
+            onDismiss = { habitoInfo = null }
+        )
+    }
+
+    agendaInfo?.let { a ->
+        val tipoTexto = when (a.tipo) {
+            TipoAgenda.RECURRENTE       -> "Recurrente · ${a.dias.joinToString(", ")}"
+            TipoAgenda.FECHA_ESPECIFICA -> "Fecha única"
+        }
+        ItemInfoDialog(
+            titulo      = a.nombre,
+            descripcion = a.descripcion,
+            detalles    = buildList {
+                add("HORA" to a.hora)
+                add("TIPO" to tipoTexto)
+            },
+            onDismiss = { agendaInfo = null }
+        )
+    }
+
+    tareaInfo?.let { t ->
+        val sdf = SimpleDateFormat("dd/MM/yyyy", Locale("es", "ES")).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        ItemInfoDialog(
+            titulo      = t.nombre,
+            descripcion = t.descripcion,
+            detalles    = buildList {
+                add("FECHA LÍMITE" to sdf.format(Date(t.fechaLimiteMillis)))
+                add("PRIORIDAD"   to t.prioridad.nombre.uppercase())
+                if (t.completada) add("ESTADO" to "✅ Completada")
+            },
+            onDismiss = { tareaInfo = null }
+        )
+    }
 }
 
 // ─────────────────────────────────────────────
-//  HEADER REDISEÑADO
+//  HEADER
 // ─────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RimuHeader(fecha: Calendar, onFechaCambiada: (Calendar) -> Unit, navController: NavController) {
+fun RimuHeader(
+    fecha: Calendar,
+    onFechaCambiada: (Calendar) -> Unit,
+    navController: NavController
+) {
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = fecha.timeInMillis)
 
@@ -290,17 +385,15 @@ fun RimuHeader(fecha: Calendar, onFechaCambiada: (Calendar) -> Unit, navControll
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-
-        // ── FILA DE ICONOS (arriba, distribuidos uniformemente) ──
         data class NavBtn(val icon: ImageVector, val desc: String, val route: String)
         val botones = listOf(
-            NavBtn(Icons.Default.Payments,      "Finanzas",     "rimu_finance"),
-            NavBtn(Icons.Default.FitnessCenter, "Gym",          "rimu_gym"),
-            NavBtn(Icons.Default.BarChart,      "Estadísticas", "rimu_habits_stats"),
-            NavBtn(Icons.Default.CalendarMonth, "Semana",       "rimu_week"),
-            NavBtn(Icons.Default.Dashboard,     "Resumen",      "rimu_summary"),
-            NavBtn(Icons.AutoMirrored.Filled.MenuBook,      "Lectura",      "rimu_lectura"),
-            NavBtn(Icons.Default.Settings,      "Backup",       "rimu_backup"),
+            NavBtn(Icons.Default.Payments,          "Finanzas",     "rimu_finance"),
+            NavBtn(Icons.Default.FitnessCenter,     "Gym",          "rimu_gym"),
+            NavBtn(Icons.Default.BarChart,          "Estadísticas", "rimu_habits_stats"),
+            NavBtn(Icons.Default.CalendarMonth,     "Semana",       "rimu_week"),
+            NavBtn(Icons.Default.Dashboard,         "Resumen",      "rimu_summary"),
+            NavBtn(Icons.AutoMirrored.Filled.MenuBook, "Lectura",   "rimu_lectura"),
+            //NavBtn(Icons.Default.Settings,          "Backup",       "rimu_backup"),
         )
 
         Row(
@@ -323,13 +416,11 @@ fun RimuHeader(fecha: Calendar, onFechaCambiada: (Calendar) -> Unit, navControll
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // ── TEXTO MOTIVACIONAL ──
-        Text("Sigue firme,", color = PrimaryText, fontSize = 26.sp, fontWeight = FontWeight.Light)
+        Text("Sigue firme,",      color = PrimaryText, fontSize = 26.sp, fontWeight = FontWeight.Light)
         Text("cada paso cuenta.", color = PrimaryText, fontSize = 26.sp, fontWeight = FontWeight.Light)
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // ── SELECTOR DE FECHA ──
         Row(
             modifier = Modifier.clickable { showDatePicker = true },
             verticalAlignment = Alignment.CenterVertically
@@ -350,86 +441,165 @@ fun RimuHeader(fecha: Calendar, onFechaCambiada: (Calendar) -> Unit, navControll
 }
 
 // ─────────────────────────────────────────────
-//  COMPONENTES DE ITEMS
+//  AGENDA ITEM  — ahora con ícono de info (ℹ)
 // ─────────────────────────────────────────────
-
 @Composable
-fun RimuAgendaItem(item: AgendaItem, isLast: Boolean, diaActual: String) {
+fun RimuAgendaItem(
+    item: AgendaItem,
+    isLast: Boolean,
+    diaActual: String,
+    onInfoClick: () -> Unit = {}          // ← NUEVO
+) {
     val completadoHoy = item.diasCompletados.contains(diaActual)
+
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        // Timeline
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(60.dp)) {
             Text(item.hora, color = SecondaryText, fontSize = 12.sp)
             Spacer(modifier = Modifier.height(12.dp))
             Box(
-                modifier = Modifier.size(14.dp).border(1.dp, CardBorderColor, CircleShape),
+                modifier = Modifier
+                    .size(14.dp)
+                    .border(1.dp, CardBorderColor, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Box(modifier = Modifier.size(2.dp).background(SecondaryText, CircleShape))
             }
-            if (!isLast) Box(modifier = Modifier.width(1.dp).height(80.dp).background(CardBorderColor))
+            if (!isLast) {
+                Box(modifier = Modifier.width(1.dp).height(80.dp).background(CardBorderColor))
+            }
         }
+
         Spacer(modifier = Modifier.width(8.dp))
+
+        // Card del evento
         Surface(
             modifier = Modifier.weight(1f).height(85.dp),
             color = MainCardBackground,
             shape = RoundedCornerShape(20.dp),
             border = BorderStroke(1.dp, if (completadoHoy) Color.Green else CardBorderColor)
         ) {
-            Row(modifier = Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .border(1.dp, if (completadoHoy) Color.Green else CardBorderColor, CircleShape)
-                        .background(if (completadoHoy) Color.Green.copy(0.1f) else Color.Transparent, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (completadoHoy) Box(modifier = Modifier.size(8.dp).background(Color.Green, CircleShape))
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Círculo de completado
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .border(1.dp, if (completadoHoy) Color.Green else CardBorderColor, CircleShape)
+                            .background(
+                                if (completadoHoy) Color.Green.copy(0.1f) else Color.Transparent,
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (completadoHoy) {
+                            Box(modifier = Modifier.size(8.dp).background(Color.Green, CircleShape))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column {
+                        Text(
+                            item.nombre,
+                            color = if (completadoHoy) Color.Gray else PrimaryText,
+                            fontSize = 16.sp
+                        )
+                        if (item.descripcion.isNotBlank()) {
+                            Text(
+                                item.descripcion,
+                                color = SecondaryText,
+                                fontSize = 12.sp,
+                                maxLines = 1
+                            )
+                        }
+                    }
                 }
-                Spacer(modifier = Modifier.width(20.dp))
-                Column {
-                    Text(item.nombre, color = if (completadoHoy) Color.Gray else PrimaryText, fontSize = 18.sp)
-                    Text(item.descripcion, color = SecondaryText, fontSize = 14.sp)
+
+                // ── Ícono de info ──
+                IconButton(
+                    onClick = onInfoClick,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Ver información",
+                        tint = SecondaryText.copy(0.45f),
+                        modifier = Modifier.size(15.dp)
+                    )
                 }
             }
         }
     }
 }
 
+// ─────────────────────────────────────────────
+//  TAREA ITEM  — ahora con ícono de info (ℹ)
+// ─────────────────────────────────────────────
 @Composable
-fun RimuTareaItem(tarea: TareaItem) {
+fun RimuTareaItem(
+    tarea: TareaItem,
+    onInfoClick: () -> Unit = {}           // ← NUEVO
+) {
     val sdf = SimpleDateFormat("dd MMM", Locale("es", "ES")).apply {
         timeZone = TimeZone.getTimeZone("UTC")
     }
     val fechaStr = sdf.format(Date(tarea.fechaLimiteMillis))
 
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        // Indicador de prioridad
         Box(modifier = Modifier.width(60.dp), contentAlignment = Alignment.Center) {
             Box(
                 modifier = Modifier
                     .size(22.dp)
-                    .border(1.5.dp, if (tarea.completada) Color.Gray else tarea.prioridad.color, CircleShape),
+                    .border(
+                        1.5.dp,
+                        if (tarea.completada) Color.Gray else tarea.prioridad.color,
+                        CircleShape
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Box(modifier = Modifier.size(4.dp).background(if (tarea.completada) Color.Gray else tarea.prioridad.color, CircleShape))
+                Box(
+                    modifier = Modifier
+                        .size(4.dp)
+                        .background(
+                            if (tarea.completada) Color.Gray else tarea.prioridad.color,
+                            CircleShape
+                        )
+                )
             }
         }
+
         Surface(
             modifier = Modifier.weight(1f).height(85.dp),
             color = MainCardBackground,
             shape = RoundedCornerShape(20.dp),
-            border = BorderStroke(1.dp, if (tarea.completada) Color.Green.copy(0.3f) else CardBorderColor)
+            border = BorderStroke(
+                1.dp,
+                if (tarea.completada) Color.Green.copy(0.3f) else CardBorderColor
+            )
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 20.dp),
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = tarea.nombre,
                         color = if (tarea.completada) Color.Gray else Color.White,
-                        fontSize = 18.sp,
-                        style = TextStyle(textDecoration = if (tarea.completada) TextDecoration.LineThrough else null)
+                        fontSize = 17.sp,
+                        style = TextStyle(
+                            textDecoration = if (tarea.completada) TextDecoration.LineThrough else null
+                        )
                     )
                     Text(
                         text = "LÍMITE: $fechaStr".uppercase(),
@@ -438,13 +608,39 @@ fun RimuTareaItem(tarea: TareaItem) {
                         fontWeight = FontWeight.Bold
                     )
                 }
-                if (tarea.prioridad == Prioridad.URGENTE && !tarea.completada)
-                    Icon(Icons.Default.Warning, null, tint = Color.Red, modifier = Modifier.size(20.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (tarea.prioridad == Prioridad.URGENTE && !tarea.completada) {
+                        Icon(
+                            Icons.Default.Warning,
+                            null,
+                            tint = Color.Red,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+
+                    // ── Ícono de info ──
+                    IconButton(
+                        onClick = onInfoClick,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Ver información",
+                            tint = SecondaryText.copy(0.45f),
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
+                }
             }
         }
     }
 }
 
+// ─────────────────────────────────────────────
+//  HELPERS
+// ─────────────────────────────────────────────
 @Composable
 fun SeccionHeader(titulo: String, onAddClick: () -> Unit) {
     Row(
@@ -452,7 +648,13 @@ fun SeccionHeader(titulo: String, onAddClick: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(titulo, color = SecondaryText, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Text(
+            titulo,
+            color = SecondaryText,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
         IconButton(onClick = onAddClick, modifier = Modifier.size(24.dp)) {
             Icon(Icons.Default.Add, null, tint = SecondaryText)
         }
@@ -461,5 +663,10 @@ fun SeccionHeader(titulo: String, onAddClick: () -> Unit) {
 
 @Composable
 fun EmptyStateText(mensaje: String) {
-    Text(mensaje, color = SecondaryText, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
+    Text(
+        mensaje,
+        color = SecondaryText,
+        fontSize = 14.sp,
+        modifier = Modifier.padding(vertical = 12.dp)
+    )
 }

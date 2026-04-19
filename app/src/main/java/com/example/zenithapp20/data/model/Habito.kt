@@ -7,15 +7,14 @@ import java.util.Calendar
 @Entity(tableName = "habitos")
 data class Habito(
     @PrimaryKey(autoGenerate = true)
-    val id: Long = 0, // Cambiado de String/UUID a Long para mejor rendimiento en Room
+    val id: Long = 0,
     val nombre: String,
+    val descripcion: String = "",          // NUEVO: qué implica o cómo hacer este hábito
     val meta: String = "1 vez al día",
     val categoria: String = "Salud",
-    val checks: List<Long> = emptyList(), // Requerirá TypeConverter
+    val checks: List<Long> = emptyList(),  // Requiere TypeConverter
     val icono: String = "🔥"
 ) {
-    // Room ignora automáticamente los 'val' con 'get()' personalizado,
-    // así que tu lógica de racha queda intacta y segura.
     val rachaDias: Int
         get() {
             if (checks.isEmpty()) return 0
@@ -38,7 +37,6 @@ data class Habito(
             }.timeInMillis
             val ayer = hoy - 86400000L
 
-            // Si no completó ni hoy ni ayer, racha rota
             if (!fechas.contains(hoy) && !fechas.contains(ayer)) return 0
 
             var diasSeguidos = 0

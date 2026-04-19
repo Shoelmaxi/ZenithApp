@@ -29,7 +29,6 @@ import com.example.zenithapp20.ui.theme.CardBorderColor
 import com.example.zenithapp20.ui.theme.MainCardBackground
 import com.example.zenithapp20.ui.theme.SecondaryText
 
-// Palabras clave que identifican hábitos gestionados automáticamente (no se pueden marcar a mano)
 private fun esHabitoGestionado(habito: Habito): Boolean {
     val nombre = habito.nombre.lowercase()
     return nombre.contains("entrenar") ||
@@ -45,7 +44,8 @@ fun HabitoQuickItem(
     habito: Habito,
     isCompletadoHoy: Boolean,
     onCheckClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,                // abre el formulario de edición
+    onInfoClick: () -> Unit = {}            // muestra el diálogo de info
 ) {
     val bloqueado = esHabitoGestionado(habito)
 
@@ -56,7 +56,6 @@ fun HabitoQuickItem(
             .background(MainCardBackground, RoundedCornerShape(16.dp))
             .border(
                 1.dp,
-                // Borde verde si completado, amarillo si bloqueado sin completar, gris si normal
                 when {
                     isCompletadoHoy -> Color.Green.copy(0.4f)
                     bloqueado       -> Color(0xFFFFD700).copy(0.2f)
@@ -68,12 +67,14 @@ fun HabitoQuickItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // ÁREA DE TEXTO — long press para editar (solo si no está bloqueado)
+        // ── ÁREA DE TEXTO ──────────────────────────────────────────────────
+        // Tap  → muestra diálogo de info
+        // Long → abre edición (solo si no está bloqueado)
         Row(
             modifier = Modifier
                 .weight(1f)
                 .combinedClickable(
-                    onClick = {},
+                    onClick = { onInfoClick() },
                     onLongClick = if (!bloqueado) onLongClick else null
                 ),
             verticalAlignment = Alignment.CenterVertically
@@ -93,23 +94,41 @@ fun HabitoQuickItem(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column {
-                Text(habito.nombre, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    text = if (bloqueado && !isCompletadoHoy) habito.meta
-                    else if (bloqueado && isCompletadoHoy) "✓ ${habito.meta}"
-                    else habito.meta,
-                    color = if (bloqueado && !isCompletadoHoy) Color(0xFFFFD700).copy(0.7f)
-                    else SecondaryText,
+                    habito.nombre,
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                // Sub-texto: meta normal o hint de bloqueado
+                Text(
+                    text = when {
+                        bloqueado && isCompletadoHoy  -> "✓ ${habito.meta}"
+                        bloqueado && !isCompletadoHoy -> habito.meta
+                        else                          -> habito.meta
+                    },
+                    color = if (bloqueado && !isCompletadoHoy)
+                        Color(0xFFFFD700).copy(0.7f) else SecondaryText,
                     fontSize = 11.sp
                 )
+
+                // Hint sutil: indica al usuario que puede tocar para ver info
+                if (habito.descripcion.isNotBlank()) {
+                    Text(
+                        text = "Toca para ver instrucciones",
+                        color = Color(0xFF4CAF50).copy(0.5f),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // ÁREA DEL CHECK
+        // ── ÁREA DEL CHECK ─────────────────────────────────────────────────
         if (bloqueado) {
-            // Hábito gestionado: solo muestra el estado, NO permite toque manual
             Box(
                 modifier = Modifier
                     .size(28.dp)
@@ -141,7 +160,6 @@ fun HabitoQuickItem(
                 }
             }
         } else {
-            // Hábito normal: permite toggle manual con animación
             val scale by animateFloatAsState(
                 targetValue = if (isCompletadoHoy) 1f else 0.9f,
                 animationSpec = spring(dampingRatio = 0.4f, stiffness = 400f),

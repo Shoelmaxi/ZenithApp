@@ -22,7 +22,7 @@ import com.example.zenithapp20.data.model.*
         Libro::class,
         SesionLectura::class
     ],
-    version = 6
+    version = 7   // ← Bumped de 6 a 7 (añadimos descripcion en habitos)
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -130,6 +130,22 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // No-op: cubre el gap entre v5 y v6 en caso de que alguien venga de v5
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Sin cambios estructurales en este tramo
+            }
+        }
+
+        // v7: agrega la columna descripcion a la tabla habitos
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE habitos ADD COLUMN descripcion TEXT NOT NULL DEFAULT ''"
+                )
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -137,7 +153,14 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "zenith_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(
+                        MIGRATION_1_2,
+                        MIGRATION_2_3,
+                        MIGRATION_3_4,
+                        MIGRATION_4_5,
+                        MIGRATION_5_6,
+                        MIGRATION_6_7
+                    )
                     .build()
                     .also { INSTANCE = it }
             }
