@@ -20,33 +20,38 @@ fun AppNavigation() {
     val context = LocalContext.current
 
     val database = remember { AppDatabase.getDatabase(context) }
-    val factory = remember { AppViewModelFactory(database, context) }
+    val factory  = remember { AppViewModelFactory(database, context) }
 
     NavHost(
         navController = navController,
         startDestination = "rimu_screen",
-        enterTransition = { fadeIn(animationSpec = tween(220)) },
-        exitTransition = { fadeOut(animationSpec = tween(180)) },
+        enterTransition  = { fadeIn(animationSpec = tween(220)) },
+        exitTransition   = { fadeOut(animationSpec = tween(180)) },
         popEnterTransition = { fadeIn(animationSpec = tween(220)) },
-        popExitTransition = { fadeOut(animationSpec = tween(180)) }
+        popExitTransition  = { fadeOut(animationSpec = tween(180)) }
     ) {
         composable("rimu_screen") {
             val habitosVM: HabitosViewModel = viewModel(factory = factory)
-            val agendaVM: AgendaViewModel = viewModel(factory = factory)
-            val tareasVM: TareasViewModel = viewModel(factory = factory)
-            val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)  // NUEVO
+            val agendaVM:  AgendaViewModel  = viewModel(factory = factory)
+            val tareasVM:  TareasViewModel  = viewModel(factory = factory)
+            val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)
             RimuScreen(
-                navController = navController,
+                navController   = navController,
                 habitosViewModel = habitosVM,
-                agendaViewModel = agendaVM,
-                tareasViewModel = tareasVM,
-                icViewModel = icVM  // NUEVO
+                agendaViewModel  = agendaVM,
+                tareasViewModel  = tareasVM,
+                icViewModel      = icVM
             )
         }
 
         composable("rimu_habits_stats") {
             val habitosVM: HabitosViewModel = viewModel(factory = factory)
-            RimuHabitsStatsScreen(navController = navController, habitosViewModel = habitosVM)
+            val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)
+            RimuHabitsStatsScreen(
+                navController    = navController,
+                habitosViewModel = habitosVM,
+                icViewModel      = icVM
+            )
         }
 
         composable("rimu_gym") {
@@ -60,11 +65,11 @@ fun AppNavigation() {
         }
 
         composable("rimu_week") {
-            val agendaVM: AgendaViewModel = viewModel(factory = factory)
+            val agendaVM:  AgendaViewModel  = viewModel(factory = factory)
             val habitosVM: HabitosViewModel = viewModel(factory = factory)
             RimuWeekScreen(
-                navController = navController,
-                agendaViewModel = agendaVM,
+                navController    = navController,
+                agendaViewModel  = agendaVM,
                 habitosViewModel = habitosVM
             )
         }
@@ -74,32 +79,32 @@ fun AppNavigation() {
         }
 
         composable("rimu_summary") {
-            val habitosVM: HabitosViewModel = viewModel(factory = factory)
-            val agendaVM: AgendaViewModel = viewModel(factory = factory)
+            val habitosVM:  HabitosViewModel  = viewModel(factory = factory)
+            val agendaVM:   AgendaViewModel   = viewModel(factory = factory)
             val finanzasVM: FinanzasViewModel = viewModel(factory = factory)
-            val aguaVM: AguaViewModel = viewModel(factory = factory)
+            val aguaVM:     AguaViewModel     = viewModel(factory = factory)
             RimuSummaryScreen(
-                navController = navController,
-                habitosViewModel = habitosVM,
-                agendaViewModel = agendaVM,
-                finanzasViewModel = finanzasVM,
-                aguaViewModel = aguaVM
+                navController      = navController,
+                habitosViewModel   = habitosVM,
+                agendaViewModel    = agendaVM,
+                finanzasViewModel  = finanzasVM,
+                aguaViewModel      = aguaVM
             )
         }
 
-        // ── LECTURA ──────────────────────────────────────────────────────────
         composable("rimu_lectura") {
             val lecturaVM: LecturaViewModel = viewModel(factory = factory)
             RimuLecturaScreen(navController = navController, viewModel = lecturaVM)
         }
 
         composable("rimu_lectura_detail/{libroId}") { backStackEntry ->
-            val libroId = backStackEntry.arguments?.getString("libroId")?.toLongOrNull() ?: return@composable
+            val libroId = backStackEntry.arguments?.getString("libroId")?.toLongOrNull()
+                ?: return@composable
             val lecturaVM: LecturaViewModel = viewModel(factory = factory)
             RimuLibroDetailScreen(
                 navController = navController,
-                libroId = libroId,
-                viewModel = lecturaVM
+                libroId       = libroId,
+                viewModel     = lecturaVM
             )
         }
 
@@ -107,21 +112,21 @@ fun AppNavigation() {
             val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)
             RimuSistemaScreen(navController = navController, viewModel = icVM)
         }
+
         composable("rimu_deep_work") {
             val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)
             RimuDeepWorkScreen(navController = navController, viewModel = icVM)
         }
+
         composable("rimu_resiliencia") {
             val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)
             RimuResilienciaScreen(navController = navController, viewModel = icVM)
         }
-        composable("rimu_reflexion") {
-            val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)
-            RimuReflexionScreen(navController = navController, viewModel = icVM)
-        }
+
         composable("rimu_sueno") {
             val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)
             RimuSuenoScreen(navController = navController, viewModel = icVM)
         }
+        // rimu_reflexion intentionally removed — user journals on paper
     }
 }

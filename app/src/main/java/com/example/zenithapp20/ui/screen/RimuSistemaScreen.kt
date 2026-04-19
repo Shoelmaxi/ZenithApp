@@ -13,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,9 +25,17 @@ fun RimuSistemaScreen(
     navController: NavController,
     viewModel: IngenieriaConductualViewModel
 ) {
-    val rachaPoder by viewModel.rachaPoder.collectAsState()
-    val sesiones by viewModel.sesionesDeepWork.collectAsState()
-    val reflexionHoy by viewModel.reflexionHoy.collectAsState()
+    val rachaPoder  by viewModel.rachaPoder.collectAsState()
+    val sesiones    by viewModel.sesionesDeepWork.collectAsState()
+
+    // Summary stats for Deep Work
+    val promedioEficiencia = remember(sesiones) {
+        if (sesiones.isEmpty()) 0
+        else sesiones.map { it.eficienciaPct }.average().toInt()
+    }
+    val mejorSesion = remember(sesiones) {
+        sesiones.maxOfOrNull { it.duracionRealMin } ?: 0
+    }
 
     Column(
         modifier = Modifier
@@ -62,7 +69,7 @@ fun RimuSistemaScreen(
                     descripcion = "Se activa automáticamente al completar hábitos",
                     accentColor = Color(0xFF4CAF50),
                     badge = null,
-                    onClick = null // se activa desde habitos
+                    onClick = null
                 )
             }
 
@@ -71,9 +78,15 @@ fun RimuSistemaScreen(
                     emoji = "🧠",
                     titulo = "Deep Work",
                     subtitulo = "Cronómetro de Enfoque Profundo",
-                    descripcion = "Sesiones: ${sesiones.size} · Calidad promedio: ${"%.0f".format(sesiones.map { it.calidadSesion }.average().takeIf { !it.isNaN() } ?: 0.0)}",
+                    descripcion = buildString {
+                        append("${sesiones.size} sesiones")
+                        if (sesiones.isNotEmpty()) {
+                            append(" · Eficiencia media: $promedioEficiencia%")
+                            append(" · Mejor: ${mejorSesion}min")
+                        }
+                    },
                     accentColor = Color(0xFF2196F3),
-                    badge = if (sesiones.isNotEmpty()) "HOY" else null,
+                    badge = if (sesiones.isNotEmpty()) "${sesiones.size}" else null,
                     onClick = { navController.navigate("rimu_deep_work") }
                 )
             }
@@ -99,19 +112,6 @@ fun RimuSistemaScreen(
                     accentColor = Color(0xFFFFD700),
                     badge = if (rachaPoder >= 7) "⚡ FUERTE" else null,
                     onClick = { navController.navigate("rimu_resiliencia") }
-                )
-            }
-
-            item {
-                SistemaCard(
-                    emoji = "♟️",
-                    titulo = "Diario del Ajedrecista",
-                    subtitulo = "Reflexión Nocturna",
-                    descripcion = if (reflexionHoy != null) "Reflexión de hoy completada ✅"
-                    else "Sin reflexión hoy — ¿cerraste el día?",
-                    accentColor = if (reflexionHoy != null) Color(0xFF00C853) else Color(0xFFFF4444),
-                    badge = if (reflexionHoy != null) "HECHO" else "PENDIENTE",
-                    onClick = { navController.navigate("rimu_reflexion") }
                 )
             }
         }

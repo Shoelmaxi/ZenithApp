@@ -39,9 +39,12 @@ fun RimuSummaryScreen(
     val balance by finanzasViewModel.balance.collectAsState()
     val totalMlAgua by aguaViewModel.totalMlHoy.collectAsState()
 
-    val ahora = remember { Calendar.getInstance() }
+    // FIX: Use two separate Calendar instances so that computing 'hoy'
+    // does not mutate 'ahora' (they previously shared the same object via apply{}).
+    val hora = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
+    val minuto = remember { Calendar.getInstance().get(Calendar.MINUTE) }
     val hoy = remember {
-        ahora.apply {
+        Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
@@ -49,7 +52,6 @@ fun RimuSummaryScreen(
         }.timeInMillis
     }
 
-    val hora = ahora.get(Calendar.HOUR_OF_DAY)
     val saludo = when {
         hora < 12 -> "Buenos días"
         hora < 19 -> "Buenas tardes"
@@ -63,16 +65,14 @@ fun RimuSummaryScreen(
     val progresoHabitos = if (totalHabitos > 0)
         habitosCompletados.toFloat() / totalHabitos.toFloat() else 0f
 
-    // días de semana key
     val diasMap = mapOf(
         Calendar.MONDAY to "L", Calendar.TUESDAY to "M", Calendar.WEDNESDAY to "X",
         Calendar.THURSDAY to "J", Calendar.FRIDAY to "V", Calendar.SATURDAY to "S",
         Calendar.SUNDAY to "D"
     )
-    val diaKey = diasMap[ahora.get(Calendar.DAY_OF_WEEK)] ?: "L"
+    val diaKey = remember { diasMap[Calendar.getInstance().get(Calendar.DAY_OF_WEEK)] ?: "L" }
 
-    // próximo evento de agenda
-    val horaActualStr = "%02d:%02d".format(hora, ahora.get(Calendar.MINUTE))
+    val horaActualStr = remember { "%02d:%02d".format(hora, minuto) }
     val proximoEvento = agenda.filter { item ->
         when (item.tipo) {
             TipoAgenda.RECURRENTE -> item.dias.contains(diaKey) && item.hora > horaActualStr
@@ -82,7 +82,6 @@ fun RimuSummaryScreen(
         }
     }.minByOrNull { it.hora }
 
-    // racha más larga activa
     val mejorRacha = habitos.maxOfOrNull { it.rachaDias } ?: 0
 
     Column(
@@ -182,7 +181,6 @@ fun RimuSummaryScreen(
                             )
                         }
 
-                        // lista rápida de hábitos pendientes
                         val pendientes = habitos.filter { habito ->
                             habito.checks.none { it >= hoy && it < hoy + 86400000 }
                         }

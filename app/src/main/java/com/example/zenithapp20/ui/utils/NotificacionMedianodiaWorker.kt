@@ -13,7 +13,6 @@ class NotificacionMedianodiaWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        // Solo actúa entre las 12:00 y las 13:30
         val hora = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         if (hora < 12 || hora > 13) return Result.success()
 
@@ -30,20 +29,15 @@ class NotificacionMedianodiaWorker(
             h.checks.any { it >= hoy && it < hoy + 86400000 }
         }
         val pendientes = habitos.size - completados
-        val rachasActivas = habitos.count { it.rachaDias > 0 }
 
-        if (pendientes == 0) return Result.success() // Todo listo, no molestes
+        // If everything is done, don't disturb the user
+        if (pendientes == 0) return Result.success()
 
-
-        val (titulo, mensaje) = if (pendientes == 0) {
-            return Result.success()
-        } else {
-            MensajesNotificacion.obtenerMensaje(
-                context = applicationContext,
-                pool = MensajesNotificacion.mensajesMediadia,
-                poolKey = "mediodia"
-            )
-        }
+        val (titulo, mensaje) = MensajesNotificacion.obtenerMensaje(
+            context = applicationContext,
+            pool = MensajesNotificacion.mensajesMediadia,
+            poolKey = "mediodia"
+        )
 
         NotificationHelper.mostrarNotificacion(
             context = applicationContext,

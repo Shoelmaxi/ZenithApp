@@ -62,15 +62,6 @@ class NotificacionNocheWorker(
             esUrgente = enRiesgo.isNotEmpty()
         )
 
-        NotificationHelper.mostrarNotificacion(
-            context = applicationContext,
-            id = 1005,
-            canal = NotificationHelper.CHANNEL_URGENTE,
-            titulo = titulo,
-            mensaje = mensaje,
-            esUrgente = enRiesgo.isNotEmpty()
-        )
-
         return Result.success()
     }
 }

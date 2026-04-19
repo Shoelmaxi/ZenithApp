@@ -1,6 +1,5 @@
 package com.example.zenithapp20.ui.components
 
-import androidx.benchmark.traceprocessor.Row
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -56,8 +55,6 @@ fun TareaForm(tareaAEditar: TareaItem? = null,
     )
     var showDatePicker by remember { mutableStateOf(false) }
 
-    // --- FIX VISUAL EN EL FORMULARIO ---
-    // Forzamos UTC aquí también para que el texto del botón no mienta
     val fechaTexto = datePickerState.selectedDateMillis?.let {
         SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).apply {
             timeZone = TimeZone.getTimeZone("UTC")
@@ -150,16 +147,12 @@ fun TareaForm(tareaAEditar: TareaItem? = null,
                 val seleccionMillis = datePickerState.selectedDateMillis
 
                 if (!nombreError && !fechaError) {
-
-                    // 1. Extraemos el día exacto que el usuario tocó en el calendario (está en UTC)
                     val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
                         if (seleccionMillis != null) {
                             timeInMillis = seleccionMillis
                         }
                     }
 
-                    // 2. Lo guardamos en un Calendar local pero forzando los mismos números de día/mes/año
-                    // Usamos las 12:00 PM para que esté lejos de cualquier borde horario que cause saltos
                     val fechaFinal = Calendar.getInstance().apply {
                         set(Calendar.YEAR, utcCal.get(Calendar.YEAR))
                         set(Calendar.MONTH, utcCal.get(Calendar.MONTH))

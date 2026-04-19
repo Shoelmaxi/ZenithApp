@@ -13,7 +13,6 @@ class RachaEnRiesgoWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        // Solo actúa entre las 22:30 y las 23:59 — el aviso más agresivo del día
         val cal = Calendar.getInstance()
         val hora = cal.get(Calendar.HOUR_OF_DAY)
         val minuto = cal.get(Calendar.MINUTE)
@@ -42,14 +41,6 @@ class RachaEnRiesgoWorker(
             poolKey = "ultimo_aviso"
         )
 
-        NotificationHelper.mostrarNotificacion(
-            context = applicationContext,
-            id = 1002,
-            canal = NotificationHelper.CHANNEL_URGENTE,
-            titulo = titulo,
-            mensaje = mensaje,
-            esUrgente = true
-        )
         NotificationHelper.mostrarNotificacion(
             context = applicationContext,
             id = 1002,
