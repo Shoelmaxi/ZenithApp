@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.zenithapp20.data.model.FrictionFactor
+import com.example.zenithapp20.data.model.RazonNoCompletado
 import com.example.zenithapp20.ui.components.CardActividadDiaria
 import com.example.zenithapp20.ui.components.CardRadarDisciplina
 import com.example.zenithapp20.ui.components.SeguimientoSemanalHabitos
@@ -35,28 +36,39 @@ fun RimuHabitsStatsScreen(
     val sesionesDeepWork by icViewModel.sesionesDeepWork.collectAsState()
 
     // ── AAA stats ─────────────────────────────────────────────────────────
-    val promedioFocusFloat = analisis
+    // Solo los que SÍ se completaron son relevantes para el focus
+    val analisisCompletados = analisis.filter { it.completado }
+    // Los que NO se completaron tienen su propio análisis (razonNoCompletado)
+    val analisisNoCompletados = analisis.filter { !it.completado }
+
+    val promedioFocusFloat = analisisCompletados
         .map { it.focusLevel }.average()
         .let { if (it.isNaN()) 0f else it.toFloat() }
 
-    val promedioFocusStr = if (analisis.isEmpty()) null
+    val promedioFocusStr = if (analisisCompletados.isEmpty()) null
     else "%.1f".format(promedioFocusFloat)
 
-    val diasAltoFocus = analisis.count { it.focusLevel >= 8 }
+    val diasAltoFocus = analisisCompletados.count { it.focusLevel >= 8 }
 
-    val habitoMasFriccion = analisis
+    val habitoMasFriccion = analisisCompletados
         .filter { it.focusLevel < 7 }
         .groupBy { it.habitoNombre }
         .maxByOrNull { it.value.size }?.key
 
-    val factorMasFrecuente = analisis
+    val factorMasFrecuente = analisisCompletados
         .groupBy { it.frictionFactor }
         .maxByOrNull { it.value.size }
         ?.let { (name, _) -> runCatching { FrictionFactor.valueOf(name) }.getOrNull() }
 
-    val ultimoPorHabito = analisis
+    val ultimoPorHabito = analisisCompletados
         .groupBy { it.habitoNombre }
         .mapValues { (_, list) -> list.maxByOrNull { it.fechaMillis }!! }
+
+    // Razón más frecuente de no completado (dato nuevo)
+    val razonMasFrecuente = analisisNoCompletados
+        .groupBy { it.razonNoCompletado }
+        .maxByOrNull { it.value.size }
+        ?.let { (name, _) -> runCatching { RazonNoCompletado.valueOf(name) }.getOrNull() }
 
     // ── Deep Work stats ───────────────────────────────────────────────────
     val promedioEficiencia = if (sesionesDeepWork.isEmpty()) 0

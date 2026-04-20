@@ -27,26 +27,17 @@ class HabitosViewModel(
     }
 
     fun verificarSiCompletadoEnFecha(habito: Habito, fechaMillis: Long): Boolean {
-        val inicioDia = Calendar.getInstance().apply {
-            timeInMillis = fechaMillis
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
+        val inicioDia = inicioDia(fechaMillis)
         return habito.checks.any { it >= inicioDia && it < inicioDia + 86400000 }
     }
 
+    /**
+     * Alterna el check de un hábito en una fecha concreta.
+     * Mantiene el comportamiento original para hábitos gestionados (agua, gym).
+     */
     fun toggleCheckEnFecha(habito: Habito, fechaMillis: Long) {
         viewModelScope.launch {
-            val inicioDia = Calendar.getInstance().apply {
-                timeInMillis = fechaMillis
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }.timeInMillis
-
+            val inicioDia = inicioDia(fechaMillis)
             val nuevosChecks = habito.checks.toMutableList()
             val checkEseDia = nuevosChecks.find { it >= inicioDia && it < inicioDia + 86400000 }
 
@@ -60,6 +51,28 @@ class HabitosViewModel(
             actualizarWidget()
         }
     }
+
+    /**
+     * Establece explícitamente el estado de completado de un hábito en una fecha.
+     * Usado por el sheet AAA: si el usuario dice "Sí lo hice" → marca; "No lo hice" → desmarca.
+     */
+    fun setCheckEnFecha(habito: Habito, fechaMillis: Long, completado: Boolean) {
+        viewModelScope.launch {
+            val inicioDia = inicioDia(fechaMillis)
+            val nuevosChecks = habito.checks.toMutableList()
+            val checkEseDia = nuevosChecks.find { it >= inicioDia && it < inicioDia + 86400000 }
+
+            when {
+                completado && checkEseDia == null  -> nuevosChecks.add(inicioDia)
+                !completado && checkEseDia != null -> nuevosChecks.remove(checkEseDia)
+                // Si ya está en el estado correcto, no hace nada
+            }
+
+            dao.updateHabito(habito.copy(checks = nuevosChecks))
+            actualizarWidget()
+        }
+    }
+
     fun eliminarHabito(habito: Habito) {
         viewModelScope.launch { dao.deleteHabito(habito) }
     }
@@ -69,4 +82,12 @@ class HabitosViewModel(
             ZenithWidget().updateAll(context)
         }
     }
+
+    private fun inicioDia(fechaMillis: Long): Long = Calendar.getInstance().apply {
+        timeInMillis = fechaMillis
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
 }

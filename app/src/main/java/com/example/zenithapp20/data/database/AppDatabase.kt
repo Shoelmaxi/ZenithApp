@@ -16,10 +16,10 @@ import com.example.zenithapp20.data.model.*
         Habito::class, Transaccion::class, RutinaDia::class,
         AgendaItem::class, TareaItem::class, AguaRegistro::class,
         Libro::class, SesionLectura::class,
-        AnalisisHabito::class, SesionDeepWork::class,       // NUEVO
-        RegistroResiliencia::class, ReflexionDiaria::class  // NUEVO
+        AnalisisHabito::class, SesionDeepWork::class,
+        RegistroResiliencia::class, ReflexionDiaria::class
     ],
-    version = 8
+    version = 9   // ← bumped from 8
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -32,7 +32,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun aguaDao(): AguaDao
     abstract fun libroDao(): LibroDao
     abstract fun sesionLecturaDao(): SesionLecturaDao
-
     abstract fun analisisHabitoDao(): AnalisisHabitoDao
     abstract fun deepWorkDao(): DeepWorkDao
     abstract fun resilienciaDao(): ResilienciaDao
@@ -132,14 +131,10 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // No-op: cubre el gap entre v5 y v6 en caso de que alguien venga de v5
         val MIGRATION_5_6 = object : Migration(5, 6) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Sin cambios estructurales en este tramo
-            }
+            override fun migrate(database: SupportSQLiteDatabase) { }
         }
 
-        // v7: agrega la columna descripcion a la tabla habitos
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL(
@@ -151,44 +146,58 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("""
-            CREATE TABLE analisis_habito (
-                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                habitoId INTEGER NOT NULL,
-                habitoNombre TEXT NOT NULL,
-                focusLevel INTEGER NOT NULL,
-                frictionFactor TEXT NOT NULL,
-                adjustmentNote TEXT NOT NULL DEFAULT '',
-                fechaMillis INTEGER NOT NULL
-            )
-        """.trimIndent())
+                    CREATE TABLE analisis_habito (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        habitoId INTEGER NOT NULL,
+                        habitoNombre TEXT NOT NULL,
+                        focusLevel INTEGER NOT NULL,
+                        frictionFactor TEXT NOT NULL,
+                        adjustmentNote TEXT NOT NULL DEFAULT '',
+                        fechaMillis INTEGER NOT NULL
+                    )
+                """.trimIndent())
                 database.execSQL("""
-            CREATE TABLE sesiones_deep_work (
-                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                duracionObjetivoMin INTEGER NOT NULL,
-                duracionRealSegundos INTEGER NOT NULL,
-                distracciones INTEGER NOT NULL,
-                calidadSesion REAL NOT NULL,
-                fechaMillis INTEGER NOT NULL
-            )
-        """.trimIndent())
+                    CREATE TABLE sesiones_deep_work (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        duracionObjetivoMin INTEGER NOT NULL,
+                        duracionRealSegundos INTEGER NOT NULL,
+                        distracciones INTEGER NOT NULL,
+                        calidadSesion REAL NOT NULL,
+                        fechaMillis INTEGER NOT NULL
+                    )
+                """.trimIndent())
                 database.execSQL("""
-            CREATE TABLE registros_resiliencia (
-                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                fechaDia INTEGER NOT NULL,
-                duchaFria INTEGER NOT NULL DEFAULT 0,
-                ayunoDopamina INTEGER NOT NULL DEFAULT 0,
-                entrenamientoResistencia INTEGER NOT NULL DEFAULT 0
-            )
-        """.trimIndent())
+                    CREATE TABLE registros_resiliencia (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        fechaDia INTEGER NOT NULL,
+                        duchaFria INTEGER NOT NULL DEFAULT 0,
+                        ayunoDopamina INTEGER NOT NULL DEFAULT 0,
+                        entrenamientoResistencia INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
                 database.execSQL("""
-            CREATE TABLE reflexiones_diarias (
-                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                fechaMillis INTEGER NOT NULL,
-                movimientoMaestro TEXT NOT NULL,
-                puntoCiego TEXT NOT NULL,
-                aperturaMañana TEXT NOT NULL
-            )
-        """.trimIndent())
+                    CREATE TABLE reflexiones_diarias (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        fechaMillis INTEGER NOT NULL,
+                        movimientoMaestro TEXT NOT NULL,
+                        puntoCiego TEXT NOT NULL,
+                        aperturaMañana TEXT NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
+        // ── NUEVA MIGRACIÓN ────────────────────────────────────────────────
+        // Agrega los campos 'completado' y 'razonNoCompletado' a analisis_habito.
+        // Los registros existentes asumen completado = 1 (true) por defecto.
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE analisis_habito ADD COLUMN completado INTEGER NOT NULL DEFAULT 1"
+                )
+                database.execSQL(
+                    "ALTER TABLE analisis_habito ADD COLUMN razonNoCompletado TEXT NOT NULL DEFAULT ''"
+                )
             }
         }
 
@@ -199,8 +208,11 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "zenith_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4,
-                        MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                    .addMigrations(
+                        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4,
+                        MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
+                        MIGRATION_7_8, MIGRATION_8_9
+                    )
                     .build()
                     .also { INSTANCE = it }
             }

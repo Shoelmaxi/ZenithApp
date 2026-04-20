@@ -14,11 +14,30 @@ class BootReceiver : BroadcastReceiver() {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
             intent.action != "android.intent.action.QUICKBOOT_POWERON") return
 
+        // En reboot siempre recalculamos delays → REPLACE
         reprogramarNotificaciones(context)
     }
 
     companion object {
+
+        /**
+         * Llamado desde BootReceiver (reinicio del dispositivo).
+         * Usa REPLACE para recalcular los delays desde la hora actual.
+         */
         fun reprogramarNotificaciones(context: Context) {
+            programar(context, ExistingPeriodicWorkPolicy.REPLACE)
+        }
+
+        /**
+         * Llamado desde ZenithApp.onCreate() (apertura normal de la app).
+         * Usa KEEP para no cancelar workers ya activos y no saltar notificaciones
+         * del día en curso si el usuario abre la app después de la hora programada.
+         */
+        fun registrarNotificacionesSiNoExisten(context: Context) {
+            programar(context, ExistingPeriodicWorkPolicy.KEEP)
+        }
+
+        private fun programar(context: Context, policy: ExistingPeriodicWorkPolicy) {
             val wm = WorkManager.getInstance(context)
 
             fun delayHasta(horaObj: Int, minutoObj: Int = 0): Long {
@@ -32,65 +51,58 @@ class BootReceiver : BroadcastReceiver() {
                 return objetivo.timeInMillis - ahora.timeInMillis
             }
 
-            // Usamos REPLACE para que al reiniciar se recalculen los delays correctamente
             wm.enqueueUniquePeriodicWork(
                 "notif_mañana",
-                ExistingPeriodicWorkPolicy.REPLACE,
+                policy,
                 PeriodicWorkRequestBuilder<RecordatorioMañanaWorker>(24, TimeUnit.HOURS)
                     .setInitialDelay(delayHasta(8), TimeUnit.MILLISECONDS)
                     .build()
             )
             wm.enqueueUniquePeriodicWork(
                 "notif_mediodia",
-                ExistingPeriodicWorkPolicy.REPLACE,
+                policy,
                 PeriodicWorkRequestBuilder<NotificacionMedianodiaWorker>(24, TimeUnit.HOURS)
                     .setInitialDelay(delayHasta(12, 30), TimeUnit.MILLISECONDS)
                     .build()
             )
             wm.enqueueUniquePeriodicWork(
                 "notif_tarde",
-                ExistingPeriodicWorkPolicy.REPLACE,
+                policy,
                 PeriodicWorkRequestBuilder<NotificacionTardeWorker>(24, TimeUnit.HOURS)
                     .setInitialDelay(delayHasta(17), TimeUnit.MILLISECONDS)
                     .build()
             )
             wm.enqueueUniquePeriodicWork(
                 "notif_noche",
-                ExistingPeriodicWorkPolicy.REPLACE,
+                policy,
                 PeriodicWorkRequestBuilder<NotificacionNocheWorker>(24, TimeUnit.HOURS)
                     .setInitialDelay(delayHasta(20), TimeUnit.MILLISECONDS)
                     .build()
             )
             wm.enqueueUniquePeriodicWork(
                 "notif_racha",
-                ExistingPeriodicWorkPolicy.REPLACE,
+                policy,
                 PeriodicWorkRequestBuilder<RachaEnRiesgoWorker>(15, TimeUnit.MINUTES)
                     .setInitialDelay(delayHasta(22, 30), TimeUnit.MILLISECONDS)
                     .build()
             )
-
-            // FINANZAS — cada 12 horas (dispara a las 10 AM y 10 PM, el worker filtra por hora internamente)
             wm.enqueueUniquePeriodicWork(
                 "notif_finanzas",
-                ExistingPeriodicWorkPolicy.REPLACE,
+                policy,
                 PeriodicWorkRequestBuilder<NotificacionFinanzasWorker>(12, TimeUnit.HOURS)
                     .setInitialDelay(delayHasta(10), TimeUnit.MILLISECONDS)
                     .build()
             )
-
-// GYM — cada 8 horas (dispara a las 9 AM y 5 PM, el worker filtra internamente)
             wm.enqueueUniquePeriodicWork(
                 "notif_gym",
-                ExistingPeriodicWorkPolicy.REPLACE,
+                policy,
                 PeriodicWorkRequestBuilder<NotificacionGymWorker>(8, TimeUnit.HOURS)
                     .setInitialDelay(delayHasta(9), TimeUnit.MILLISECONDS)
                     .build()
             )
-
-// AGUA — cada 2 horas entre las 8 AM y 9 PM
             wm.enqueueUniquePeriodicWork(
                 "notif_agua",
-                ExistingPeriodicWorkPolicy.REPLACE,
+                policy,
                 PeriodicWorkRequestBuilder<NotificacionAguaWorker>(2, TimeUnit.HOURS)
                     .setInitialDelay(delayHasta(8), TimeUnit.MILLISECONDS)
                     .build()

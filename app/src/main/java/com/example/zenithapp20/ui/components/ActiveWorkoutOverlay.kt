@@ -22,6 +22,8 @@ import com.example.zenithapp20.data.model.SerieRegistro
 import com.example.zenithapp20.ui.theme.DeepBackground
 import com.example.zenithapp20.ui.theme.SecondaryText
 import com.example.zenithapp20.ui.viewmodel.WorkoutState
+import com.example.zenithapp20.utils.WorkoutForegroundService
+import com.example.zenithapp20.utils.WorkoutNotifState
 import kotlinx.coroutines.delay
 
 @Composable
@@ -32,70 +34,84 @@ fun ActiveWorkoutOverlay(
 ) {
     val context = LocalContext.current
 
-    // --- FIX: Mantener pantalla encendida durante el entrenamiento ---
+    // ── Mantener pantalla encendida ──────────────────────────────────────
     DisposableEffect(Unit) {
         val window = (context as Activity).window
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        onDispose {
-            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
+        onDispose { window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     }
 
-    // --- Sonido para cuenta regresiva ---
+    // ── Foreground service: inicia al montar, detiene al desmontar ───────
+    DisposableEffect(Unit) {
+        WorkoutForegroundService.iniciar(context)
+        onDispose { WorkoutForegroundService.detener(context) }
+    }
+
+    // ── Sonido cuenta regresiva ──────────────────────────────────────────
     val toneGen = remember { ToneGenerator(AudioManager.STREAM_MUSIC, 80) }
     DisposableEffect(Unit) {
         onDispose { toneGen.release() }
     }
 
-    // --- Estado local del overlay, inicializado desde el ViewModel ---
+    // ── Estado local ─────────────────────────────────────────────────────
     var ejIdx by remember { mutableIntStateOf(workoutState.ejIdx) }
     var serieActual by remember { mutableIntStateOf(workoutState.serieActual) }
     val ejerciciosFinales = remember {
-        workoutState.ejerciciosFinales.toMutableList().also { /* snapshot */ }
+        workoutState.ejerciciosFinales.toMutableList()
     }.let { remember { it.toMutableList() } }
 
-    // Registros de la serie actual del ejercicio en curso (se acumulan y se guardan al avanzar)
     val registrosDeEsteEjercicio = remember { mutableStateListOf<SerieRegistro>() }
 
-    // Inputs del usuario
     var pesoInput by remember { mutableStateOf("") }
     var repsInput by remember { mutableStateOf("") }
 
-    // Timer
     var isTimerRunning by remember { mutableStateOf(false) }
     var timeLeft by remember {
-        mutableIntStateOf(workoutState.ejerciciosFinales.getOrNull(workoutState.ejIdx)?.descansoSegundos ?: 60)
+        mutableIntStateOf(
+            workoutState.ejerciciosFinales.getOrNull(workoutState.ejIdx)?.descansoSegundos ?: 60
+        )
     }
 
     val ejercicioActual = ejerciciosFinales.getOrNull(ejIdx)
 
-    // --- Determina si al terminar la serie actual toca cambiar de ejercicio ---
     val esUltimaSerieDeEjercicio = ejercicioActual?.esCardio == true ||
             serieActual >= (ejercicioActual?.seriesObjetivo ?: 1)
 
-    // Nombre del siguiente ejercicio para mostrar durante el descanso
     val nombreSiguienteEjercicio = if (esUltimaSerieDeEjercicio) {
         ejerciciosFinales.getOrNull(ejIdx + 1)?.nombre
     } else null
 
-    // --- Función para avanzar al siguiente estado (siguiente serie o siguiente ejercicio) ---
+    // ── Helper: actualiza la notificación del servicio ───────────────────
+    fun pushNotif() {
+        val ej = ejercicioActual ?: return
+        WorkoutForegroundService.actualizar(
+            context,
+            WorkoutNotifState(
+                ejercicioNombre = if (isTimerRunning)
+                    (nombreSiguienteEjercicio ?: ej.nombre)
+                else
+                    ej.nombre,
+                serieTexto = "Serie $serieActual / ${ej.seriesObjetivo}",
+                timerTexto = String.format("%02d:%02d", timeLeft / 60, timeLeft % 60),
+                esDescanso = isTimerRunning
+            )
+        )
+    }
+
+    // ── Avanzar al siguiente estado ──────────────────────────────────────
     fun avanzar() {
         if (ejercicioActual == null) return
-
         if (!esUltimaSerieDeEjercicio) {
-            // Siguiente serie del mismo ejercicio
             serieActual++
             timeLeft = ejercicioActual.descansoSegundos
             onStateUpdate(WorkoutState(ejIdx, serieActual, ejerciciosFinales))
         } else {
-            // Guardar registros en el ejercicio actual antes de pasar al siguiente
             val updatedEj = ejerciciosFinales[ejIdx].copy(
                 registrosRealizados = registrosDeEsteEjercicio.toList()
             )
             ejerciciosFinales[ejIdx] = updatedEj
 
             if (ejIdx < ejerciciosFinales.size - 1) {
-                // Siguiente ejercicio
                 ejIdx++
                 serieActual = 1
                 pesoInput = ""
@@ -104,35 +120,40 @@ fun ActiveWorkoutOverlay(
                 timeLeft = ejerciciosFinales[ejIdx].descansoSegundos
                 onStateUpdate(WorkoutState(ejIdx, serieActual, ejerciciosFinales))
             } else {
-                // Entrenamiento terminado
                 onFinish(ejerciciosFinales)
             }
         }
     }
 
-    // --- FIX: Timer con while loop — no crea un efecto por cada tick ---
+    // ── Timer con while loop + actualización de notificación ─────────────
     LaunchedEffect(isTimerRunning) {
         if (!isTimerRunning) return@LaunchedEffect
 
         while (timeLeft > 0) {
             delay(1000L)
-            if (!isTimerRunning) return@LaunchedEffect // Cancelado por saltar descanso
+            if (!isTimerRunning) return@LaunchedEffect
             timeLeft--
 
-            // FIX: Sonido cuenta regresiva en los últimos 3 segundos
+            // Actualizar notificación en segundo plano cada segundo
+            pushNotif()
+
             if (timeLeft in 1..3) {
                 toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, 250)
             }
         }
 
-        // Timer llegó a 0 naturalmente
         if (isTimerRunning) {
             isTimerRunning = false
             avanzar()
         }
     }
 
-    // --- UI ---
+    // Actualizar notificación cuando cambia el ejercicio o la serie (modo trabajo)
+    LaunchedEffect(ejIdx, serieActual) {
+        if (!isTimerRunning) pushNotif()
+    }
+
+    // ── UI ────────────────────────────────────────────────────────────────
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -145,7 +166,6 @@ fun ActiveWorkoutOverlay(
                 modifier = Modifier.fillMaxWidth()
             ) {
 
-                // Estado: TRABAJO / DESCANSO
                 Text(
                     text = if (isTimerRunning) "DESCANSO" else "TRABAJO",
                     color = if (isTimerRunning) Color(0xFFFFD700) else Color(0xFF00C853),
@@ -178,7 +198,7 @@ fun ActiveWorkoutOverlay(
                 Spacer(modifier = Modifier.height(40.dp))
 
                 if (!isTimerRunning) {
-                    // --- MODO TRABAJO ---
+                    // ── MODO TRABAJO ─────────────────────────────────────
                     Text(
                         text = "SERIE $serieActual / ${ej.seriesObjetivo}",
                         color = Color.White,
@@ -211,9 +231,7 @@ fun ActiveWorkoutOverlay(
                     }
 
                 } else {
-                    // --- MODO DESCANSO ---
-
-                    // Reloj gigante — se pone rojo en los últimos 3 segundos
+                    // ── MODO DESCANSO ────────────────────────────────────
                     Text(
                         text = String.format("%02d:%02d", timeLeft / 60, timeLeft % 60),
                         color = if (timeLeft in 1..3) Color.Red else Color.White,
@@ -223,7 +241,6 @@ fun ActiveWorkoutOverlay(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // FIX: Muestra el nombre del siguiente ejercicio si existe
                     if (nombreSiguienteEjercicio != null) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
@@ -253,8 +270,10 @@ fun ActiveWorkoutOverlay(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Barra de progreso del entrenamiento
-                val progreso = (ejIdx.toFloat() + (serieActual.toFloat() / (ejercicioActual.seriesObjetivo.coerceAtLeast(1)))) / ejerciciosFinales.size.coerceAtLeast(1)
+                // Barra de progreso
+                val progreso = (ejIdx.toFloat() + (serieActual.toFloat() /
+                        (ejercicioActual.seriesObjetivo.coerceAtLeast(1)))) /
+                        ejerciciosFinales.size.coerceAtLeast(1)
                 LinearProgressIndicator(
                     progress = { progreso.coerceIn(0f, 1f) },
                     modifier = Modifier.fillMaxWidth().height(4.dp),
@@ -268,7 +287,6 @@ fun ActiveWorkoutOverlay(
                 Button(
                     onClick = {
                         if (!isTimerRunning) {
-                            // Registrar serie
                             registrosDeEsteEjercicio.add(
                                 SerieRegistro(
                                     peso = pesoInput,
@@ -276,10 +294,8 @@ fun ActiveWorkoutOverlay(
                                     completada = true
                                 )
                             )
-                            // FIX: Para cardio el timer se inicia igual (cuenta el descanso entre ejercicios)
                             isTimerRunning = true
                         } else {
-                            // Saltar descanso: cancela el LaunchedEffect y avanza manualmente
                             isTimerRunning = false
                             avanzar()
                         }
@@ -288,7 +304,8 @@ fun ActiveWorkoutOverlay(
                         .fillMaxWidth()
                         .height(72.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isTimerRunning) Color.White.copy(0.08f) else Color.White
+                        containerColor = if (isTimerRunning)
+                            Color.White.copy(0.08f) else Color.White
                     ),
                     shape = RoundedCornerShape(20.dp)
                 ) {

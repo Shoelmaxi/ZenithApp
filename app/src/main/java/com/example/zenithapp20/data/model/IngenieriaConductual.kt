@@ -11,13 +11,24 @@ enum class FrictionFactor(val label: String, val emoji: String) {
     ENTORNO("Entorno", "🏠")
 }
 
+enum class RazonNoCompletado(val label: String, val emoji: String) {
+    OLVIDO("Lo olvidé", "🧠"),
+    FALTA_TIEMPO("Falta de tiempo", "⏰"),
+    FALTA_ENERGIA("Sin energía", "😴"),
+    OTRA_PRIORIDAD("Otra prioridad", "📋"),
+    ENTORNO("Entorno no ayudó", "🏠"),
+    RESISTENCIA_MENTAL("Resistencia mental", "🧗")
+}
+
 @Entity(tableName = "analisis_habito")
 data class AnalisisHabito(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val habitoId: Long,
     val habitoNombre: String,
-    val focusLevel: Int,
+    val completado: Boolean = true,           // ¿Se hizo el hábito?
+    val focusLevel: Int,                      // Solo relevante si completado = true
     val frictionFactor: String,
+    val razonNoCompletado: String = "",        // Solo relevante si completado = false
     val adjustmentNote: String = "",
     val fechaMillis: Long = System.currentTimeMillis()
 )

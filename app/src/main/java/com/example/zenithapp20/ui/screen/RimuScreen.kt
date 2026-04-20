@@ -206,17 +206,12 @@ fun RimuScreen(
                                         habito, fechaSeleccionada.timeInMillis
                                     ),
                                     onCheckClick = {
-                                        val estabaCompletado = habitosViewModel.verificarSiCompletadoEnFecha(
-                                            habito, fechaSeleccionada.timeInMillis
-                                        )
-                                        habitosViewModel.toggleCheckEnFecha(habito, fechaSeleccionada.timeInMillis)
-                                        // Solo muestra AAA si acabas de COMPLETAR (no si desmarcas)
-                                        if (!estabaCompletado) {
-                                            habitoParaAnalisis = habito
-                                        }
+                                        // Ya no se toglea aquí.
+                                        // El sheet AAA es quien decide si el hábito queda marcado o no.
+                                        habitoParaAnalisis = habito
                                     },
                                     onLongClick = { habitoAEditar = habito; showHabitoSheet = true },
-                                    onInfoClick = { habitoInfo = habito }
+                                    onInfoClick  = { habitoInfo = habito }
                                 )
                             }
                         }
@@ -266,8 +261,19 @@ fun RimuScreen(
         ) {
             AnalisisAAASheet(
                 habito = habito,
+                // Pre-selecciona "Sí" si el hábito ya estaba marcado al abrir el sheet
+                estaCompletadoHoy = habitosViewModel.verificarSiCompletadoEnFecha(
+                    habito, fechaSeleccionada.timeInMillis
+                ),
                 onSave = { analisis ->
+                    // 1. Guardar el análisis en BD
                     icViewModel.guardarAnalisis(analisis)
+                    // 2. Marcar o desmarcar el hábito según la respuesta del usuario
+                    habitosViewModel.setCheckEnFecha(
+                        habito,
+                        fechaSeleccionada.timeInMillis,
+                        analisis.completado
+                    )
                     habitoParaAnalisis = null
                 },
                 onSkip = { habitoParaAnalisis = null }
