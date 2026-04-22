@@ -36,7 +36,7 @@ fun AppNavigation() {
             val tareasVM:  TareasViewModel  = viewModel(factory = factory)
             val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)
             RimuScreen(
-                navController   = navController,
+                navController    = navController,
                 habitosViewModel = habitosVM,
                 agendaViewModel  = agendaVM,
                 tareasViewModel  = tareasVM,
@@ -84,11 +84,11 @@ fun AppNavigation() {
             val finanzasVM: FinanzasViewModel = viewModel(factory = factory)
             val aguaVM:     AguaViewModel     = viewModel(factory = factory)
             RimuSummaryScreen(
-                navController      = navController,
-                habitosViewModel   = habitosVM,
-                agendaViewModel    = agendaVM,
-                finanzasViewModel  = finanzasVM,
-                aguaViewModel      = aguaVM
+                navController     = navController,
+                habitosViewModel  = habitosVM,
+                agendaViewModel   = agendaVM,
+                finanzasViewModel = finanzasVM,
+                aguaViewModel     = aguaVM
             )
         }
 
@@ -127,6 +127,11 @@ fun AppNavigation() {
             val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)
             RimuSuenoScreen(navController = navController, viewModel = icVM)
         }
-        // rimu_reflexion intentionally removed — user journals on paper
+
+        // ── NUEVA PANTALLA: Triple A ───────────────────────────────────────
+        composable("rimu_triple_a") {
+            val icVM: IngenieriaConductualViewModel = viewModel(factory = factory)
+            RimuTripleAScreen(navController = navController, viewModel = icVM)
+        }
     }
 }

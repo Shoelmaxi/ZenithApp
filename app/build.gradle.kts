@@ -55,14 +55,13 @@ configurations.all {
 }
 
 dependencies {
-    // Core y Ciclo de vida (Versiones estables manuales para evitar el error del SDK 36)
+    // Core y Ciclo de vida
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.benchmark.traceprocessor)
 
-    // Compose - Usamos un BOM estable de finales de 2024
+    // Compose BOM estable
     val composeBom = platform("androidx.compose:compose-bom:2024.10.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
@@ -74,7 +73,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.foundation:foundation-layout")
 
-    // Navegación (Versión estable)
+    // Navegación
     implementation("androidx.navigation:navigation-compose:2.8.3")
 
     // Iconos
@@ -91,6 +90,7 @@ dependencies {
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
+    // Widget
     implementation("androidx.glance:glance-appwidget:1.0.0")
     implementation("androidx.glance:glance-material3:1.0.0")
 

@@ -17,9 +17,12 @@ import com.example.zenithapp20.data.model.*
         AgendaItem::class, TareaItem::class, AguaRegistro::class,
         Libro::class, SesionLectura::class,
         AnalisisHabito::class, SesionDeepWork::class,
-        RegistroResiliencia::class, ReflexionDiaria::class
+        RegistroResiliencia::class,
+        // ReflexionDiaria se mantiene en la lista para no romper el schema de la BD,
+        // aunque ya no hay pantalla que la consuma.
+        ReflexionDiaria::class
     ],
-    version = 9   // ← bumped from 8
+    version = 10
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -35,7 +38,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun analisisHabitoDao(): AnalisisHabitoDao
     abstract fun deepWorkDao(): DeepWorkDao
     abstract fun resilienciaDao(): ResilienciaDao
-    abstract fun reflexionDao(): ReflexionDao
+    // reflexionDao eliminado: pantalla de reflexión removida.
+    // La tabla reflexiones_diarias persiste en el schema para no requerir migración.
 
     companion object {
 
@@ -113,7 +117,6 @@ abstract class AppDatabase : RoomDatabase() {
                         fechaFin INTEGER
                     )
                 """.trimIndent())
-
                 database.execSQL("""
                     CREATE TABLE sesiones_lectura (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -187,9 +190,6 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // ── NUEVA MIGRACIÓN ────────────────────────────────────────────────
-        // Agrega los campos 'completado' y 'razonNoCompletado' a analisis_habito.
-        // Los registros existentes asumen completado = 1 (true) por defecto.
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL(
@@ -197,6 +197,14 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 database.execSQL(
                     "ALTER TABLE analisis_habito ADD COLUMN razonNoCompletado TEXT NOT NULL DEFAULT ''"
+                )
+            }
+        }
+
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE analisis_habito ADD COLUMN factorPositivo TEXT NOT NULL DEFAULT ''"
                 )
             }
         }
@@ -211,7 +219,7 @@ abstract class AppDatabase : RoomDatabase() {
                     .addMigrations(
                         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4,
                         MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
-                        MIGRATION_7_8, MIGRATION_8_9
+                        MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10
                     )
                     .build()
                     .also { INSTANCE = it }

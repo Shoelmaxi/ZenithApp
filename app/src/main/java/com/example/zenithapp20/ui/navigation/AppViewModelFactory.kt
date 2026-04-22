@@ -17,7 +17,7 @@ class AppViewModelFactory(
             modelClass.isAssignableFrom(FinanzasViewModel::class.java) ->
                 FinanzasViewModel(db.finanzasDao()) as T
             modelClass.isAssignableFrom(GymViewModel::class.java) ->
-                GymViewModel(db.gymDao(), db.habitosDao()) as T
+                GymViewModel(db.gymDao(), db.habitosDao(), context) as T
             modelClass.isAssignableFrom(AgendaViewModel::class.java) ->
                 AgendaViewModel(db.agendaDao()) as T
             modelClass.isAssignableFrom(TareasViewModel::class.java) ->
@@ -31,7 +31,6 @@ class AppViewModelFactory(
                     db.analisisHabitoDao(),
                     db.deepWorkDao(),
                     db.resilienciaDao(),
-                    db.reflexionDao(),
                     context
                 ) as T
             else -> throw IllegalArgumentException("ViewModel desconocido: ${modelClass.name}")

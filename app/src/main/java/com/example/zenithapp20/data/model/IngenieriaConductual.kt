@@ -11,6 +11,15 @@ enum class FrictionFactor(val label: String, val emoji: String) {
     ENTORNO("Entorno", "🏠")
 }
 
+enum class FactorPositivo(val label: String, val emoji: String) {
+    SIN_FRICCION("Sin fricción", "✨"),
+    ALTA_ENERGIA("Alta energía", "⚡"),
+    ENTORNO_IDEAL("Entorno ideal", "🏠"),
+    MOTIVACION("Alta motivación", "🎯"),
+    HABITO_AUTOMATICO("Ya es automático", "🔄"),
+    MOMENTUM("Momentum del día", "🚀")
+}
+
 enum class RazonNoCompletado(val label: String, val emoji: String) {
     OLVIDO("Lo olvidé", "🧠"),
     FALTA_TIEMPO("Falta de tiempo", "⏰"),
@@ -25,10 +34,11 @@ data class AnalisisHabito(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val habitoId: Long,
     val habitoNombre: String,
-    val completado: Boolean = true,           // ¿Se hizo el hábito?
-    val focusLevel: Int,                      // Solo relevante si completado = true
+    val completado: Boolean = true,
+    val focusLevel: Int,
     val frictionFactor: String,
-    val razonNoCompletado: String = "",        // Solo relevante si completado = false
+    val factorPositivo: String = "",          // ← NUEVO: factor cuando focus es alto
+    val razonNoCompletado: String = "",
     val adjustmentNote: String = "",
     val fechaMillis: Long = System.currentTimeMillis()
 )

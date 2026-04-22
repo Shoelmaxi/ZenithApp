@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.zenithapp20.data.model.FrictionFactor
-import com.example.zenithapp20.data.model.RazonNoCompletado
 import com.example.zenithapp20.ui.components.CardActividadDiaria
 import com.example.zenithapp20.ui.components.CardRadarDisciplina
 import com.example.zenithapp20.ui.components.SeguimientoSemanalHabitos
@@ -36,10 +35,7 @@ fun RimuHabitsStatsScreen(
     val sesionesDeepWork by icViewModel.sesionesDeepWork.collectAsState()
 
     // ── AAA stats ─────────────────────────────────────────────────────────
-    // Solo los que SÍ se completaron son relevantes para el focus
     val analisisCompletados = analisis.filter { it.completado }
-    // Los que NO se completaron tienen su propio análisis (razonNoCompletado)
-    val analisisNoCompletados = analisis.filter { !it.completado }
 
     val promedioFocusFloat = analisisCompletados
         .map { it.focusLevel }.average()
@@ -63,12 +59,6 @@ fun RimuHabitsStatsScreen(
     val ultimoPorHabito = analisisCompletados
         .groupBy { it.habitoNombre }
         .mapValues { (_, list) -> list.maxByOrNull { it.fechaMillis }!! }
-
-    // Razón más frecuente de no completado (dato nuevo)
-    val razonMasFrecuente = analisisNoCompletados
-        .groupBy { it.razonNoCompletado }
-        .maxByOrNull { it.value.size }
-        ?.let { (name, _) -> runCatching { RazonNoCompletado.valueOf(name) }.getOrNull() }
 
     // ── Deep Work stats ───────────────────────────────────────────────────
     val promedioEficiencia = if (sesionesDeepWork.isEmpty()) 0
@@ -100,12 +90,10 @@ fun RimuHabitsStatsScreen(
             contentPadding = PaddingValues(bottom = 40.dp)
         ) {
 
-            // ── Existing habit charts ─────────────────────────────────────
             item { CardRadarDisciplina(listaHabitos = listaHabitos) }
             item { SeguimientoSemanalHabitos(listaHabitos = listaHabitos) }
             item { CardActividadDiaria(listaHabitos = listaHabitos) }
 
-            // ── Section separator ─────────────────────────────────────────
             item {
                 Text(
                     "INGENIERÍA CONDUCTUAL",
@@ -116,7 +104,7 @@ fun RimuHabitsStatsScreen(
                 )
             }
 
-            // ── AAA card — ALWAYS visible ─────────────────────────────────
+            // ── AAA resumen ───────────────────────────────────────────────
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -151,7 +139,6 @@ fun RimuHabitsStatsScreen(
                                 color = SecondaryText, fontSize = 12.sp, lineHeight = 18.sp
                             )
                         } else {
-                            // Focus bar
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -222,7 +209,7 @@ fun RimuHabitsStatsScreen(
                 }
             }
 
-            // ── Per-habit last focus — only if data exists ────────────────
+            // ── Último focus por hábito ───────────────────────────────────
             if (ultimoPorHabito.isNotEmpty()) {
                 item {
                     Surface(
@@ -276,7 +263,7 @@ fun RimuHabitsStatsScreen(
                 }
             }
 
-            // ── Deep Work card — ALWAYS visible ──────────────────────────
+            // ── Deep Work resumen ─────────────────────────────────────────
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),

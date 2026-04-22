@@ -16,7 +16,6 @@ class IngenieriaConductualViewModel(
     private val analisisDao: AnalisisHabitoDao,
     private val deepWorkDao: DeepWorkDao,
     private val resilienciaDao: ResilienciaDao,
-    private val reflexionDao: ReflexionDao,
     private val context: Context
 ) : ViewModel() {
 
@@ -33,15 +32,14 @@ class IngenieriaConductualViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun guardarSesionDeepWork(duracionObjetivoMin: Int, duracionRealSegundos: Long, distracciones: Int) {
-        // Fórmula: tiempo_real / (distracciones + 1)
         val calidad = duracionRealSegundos.toFloat() / (distracciones + 1)
         viewModelScope.launch {
             deepWorkDao.insert(
                 SesionDeepWork(
-                    duracionObjetivoMin = duracionObjetivoMin,
-                    duracionRealSegundos = duracionRealSegundos,
-                    distracciones = distracciones,
-                    calidadSesion = calidad
+                    duracionObjetivoMin    = duracionObjetivoMin,
+                    duracionRealSegundos   = duracionRealSegundos,
+                    distracciones          = distracciones,
+                    calidadSesion          = calidad
                 )
             )
         }
@@ -91,13 +89,15 @@ class IngenieriaConductualViewModel(
 
     fun toggleEntrenamiento() {
         viewModelScope.launch {
-            _registroHoy.value?.let { actualizarRegistro(it.copy(entrenamientoResistencia = !it.entrenamientoResistencia)) }
+            _registroHoy.value?.let {
+                actualizarRegistro(it.copy(entrenamientoResistencia = !it.entrenamientoResistencia))
+            }
         }
     }
 
     /**
      * Día perfecto → racha + 1
-     * Día fallido → racha * 0.5 (nunca a 0, mantiene impulso psicológico)
+     * Día fallido   → racha × 0.5 (nunca a 0, mantiene impulso psicológico)
      */
     private fun calcularRachaPoder(registros: List<RegistroResiliencia>): Float {
         var racha = 0f
@@ -105,27 +105,6 @@ class IngenieriaConductualViewModel(
             racha = if (registro.diaPerfecto) racha + 1f else maxOf(racha * 0.5f, 0f)
         }
         return racha
-    }
-
-    // ── Reflexión ─────────────────────────────────────────────────────────────
-    val reflexiones: StateFlow<List<ReflexionDiaria>> = reflexionDao.getAll()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    private val _reflexionHoy = MutableStateFlow<ReflexionDiaria?>(null)
-    val reflexionHoy: StateFlow<ReflexionDiaria?> = _reflexionHoy.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            val hoy = inicioDiaHoy()
-            _reflexionHoy.value = reflexionDao.getDeHoy(hoy, hoy + 86400000L)
-        }
-    }
-
-    fun guardarReflexion(reflexion: ReflexionDiaria) {
-        viewModelScope.launch {
-            reflexionDao.insert(reflexion)
-            _reflexionHoy.value = reflexion
-        }
     }
 
     // ── Sleep Calculator ──────────────────────────────────────────────────────
@@ -146,7 +125,7 @@ class IngenieriaConductualViewModel(
             set(Calendar.HOUR_OF_DAY, horaDormir)
             set(Calendar.MINUTE, minDormir)
             set(Calendar.SECOND, 0)
-            add(Calendar.MINUTE, -60) // 60 min antes
+            add(Calendar.MINUTE, -60)
         }
         if (ahora.after(objetivo)) objetivo.add(Calendar.DAY_OF_YEAR, 1)
         val delay = objetivo.timeInMillis - ahora.timeInMillis

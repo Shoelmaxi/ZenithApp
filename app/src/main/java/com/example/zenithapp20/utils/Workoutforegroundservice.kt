@@ -7,6 +7,8 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.example.zenithapp20.MainActivity
@@ -107,7 +109,19 @@ class WorkoutForegroundService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        startForeground(NOTIF_ID, buildNotif(this, _estado.value))
+
+        // API 34+ requiere pasar el tipo explícitamente en la llamada a startForeground
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                NOTIF_ID,
+                buildNotif(this, _estado.value),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            startForeground(NOTIF_ID, buildNotif(this, _estado.value))
+        }
+
         return START_STICKY
     }
 
