@@ -10,7 +10,10 @@ interface SesionLecturaDao {
     @Query("SELECT * FROM sesiones_lectura WHERE libroId = :libroId ORDER BY fecha DESC")
     fun getSesionesByLibro(libroId: Long): Flow<List<SesionLectura>>
 
-    // Solo sesiones con lección o estrategia — para el "Filtro de Auditoría"
+    // Para El Oráculo — lectura directa sin Flow
+    @Query("SELECT * FROM sesiones_lectura WHERE libroId = :libroId ORDER BY fecha DESC")
+    suspend fun getSesionesByLibroSync(libroId: Long): List<SesionLectura>
+
     @Query("""
         SELECT * FROM sesiones_lectura
         WHERE libroId = :libroId
@@ -19,11 +22,9 @@ interface SesionLecturaDao {
     """)
     fun getSesionesConInsightByLibro(libroId: Long): Flow<List<SesionLectura>>
 
-    // Total de páginas leídas en toda la app (para stats)
     @Query("SELECT SUM(paginaFin - paginaInicio) FROM sesiones_lectura")
     suspend fun getTotalPaginasLeidas(): Int?
 
-    // Sesiones de esta semana (para stats)
     @Query("SELECT COUNT(*) FROM sesiones_lectura WHERE fecha >= :inicioSemana")
     suspend fun getSesionesDesde(inicioSemana: Long): Int
 

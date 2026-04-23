@@ -12,6 +12,12 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
+// Dato que muestra El Oráculo: la cita + de qué libro viene
+data class OracleInsight(
+    val texto: String,
+    val tituloLibro: String
+)
+
 class LecturaViewModel(
     private val libroDao: LibroDao,
     private val sesionDao: SesionLecturaDao,
@@ -47,26 +53,21 @@ class LecturaViewModel(
     fun getSesionesConInsight(libroId: Long): Flow<List<SesionLectura>> =
         sesionDao.getSesionesConInsightByLibro(libroId)
 
-    /**
-     * Guarda la sesión, actualiza la página actual del libro, dispara el
-     * trigger de finalización si corresponde, y marca el hábito de lectura.
-     */
     fun guardarSesion(sesion: SesionLectura, libro: Libro) {
         viewModelScope.launch {
             sesionDao.insertSesion(sesion)
 
             val nuevaPagina = sesion.paginaFin
-            val terminado = nuevaPagina >= libro.paginasTotales
+            val terminado   = nuevaPagina >= libro.paginasTotales
             val nuevoEstado = if (terminado) EstadoLibro.TERMINADO else EstadoLibro.LEYENDO
-            val ahora = System.currentTimeMillis()
+            val ahora       = System.currentTimeMillis()
 
             libroDao.updateLibro(
                 libro.copy(
                     paginaActual = nuevaPagina,
-                    estado = nuevoEstado,
-                    // Primera sesión → se setea fechaInicio
-                    fechaInicio = libro.fechaInicio ?: ahora,
-                    fechaFin = if (terminado) ahora else libro.fechaFin
+                    estado       = nuevoEstado,
+                    fechaInicio  = libro.fechaInicio ?: ahora,
+                    fechaFin     = if (terminado) ahora else libro.fechaFin
                 )
             )
 
@@ -78,10 +79,47 @@ class LecturaViewModel(
         viewModelScope.launch { sesionDao.deleteSesion(sesion) }
     }
 
+    // ── El Oráculo ────────────────────────────────────────────────────────────
+    // Carga una aplicación estratégica aleatoria de cualquier sesión de lectura.
+    // Incluye el título del libro para dar contexto.
+    // Devuelve null si no hay ninguna sesión con aplicación estratégica registrada.
+
+    private val _oracleInsight = MutableStateFlow<OracleInsight?>(null)
+    val oracleInsight: StateFlow<OracleInsight?> = _oracleInsight.asStateFlow()
+
+    init {
+        cargarOracle()
+    }
+
+    fun cargarOracle() {
+        viewModelScope.launch {
+            // Traemos todas las sesiones con insight y elegimos una al azar
+            val todasLasSesiones = sesionDao.getTotalPaginasLeidas() // solo para verificar si hay datos
+            val librosActuales   = libroDao.getAllLibrosSync()
+
+            // Recopilamos todas las sesiones con aplicación estratégica no vacía
+            val candidatos = mutableListOf<OracleInsight>()
+            librosActuales.forEach { libro ->
+                sesionDao.getSesionesByLibroSync(libro.id).forEach { sesion ->
+                    if (sesion.aplicacionEstrategica.isNotBlank()) {
+                        candidatos.add(
+                            OracleInsight(
+                                texto       = sesion.aplicacionEstrategica,
+                                tituloLibro = libro.titulo
+                            )
+                        )
+                    }
+                }
+            }
+
+            _oracleInsight.value = if (candidatos.isNotEmpty()) candidatos.random() else null
+        }
+    }
+
     // ── Hábito de lectura ─────────────────────────────────────────────────────
 
     private suspend fun marcarHabitoLecturaHoy() {
-        val hoy = inicioDiaHoy()
+        val hoy     = inicioDiaHoy()
         val habitos = habitosDao.getAllHabitosSync()
         val habitoLeer = habitos.find {
             val n = it.nombre.lowercase()

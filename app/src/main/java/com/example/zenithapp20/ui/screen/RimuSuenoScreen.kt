@@ -19,11 +19,14 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.zenithapp20.ui.theme.*
 import com.example.zenithapp20.ui.viewmodel.IngenieriaConductualViewModel
+import java.util.Calendar
 
-private const val PREFS_SUENO = "zenith_sueno_prefs"
+private const val PREFS_SUENO   = "zenith_sueno_prefs"
 private const val KEY_NOTIF_HORA = "notif_hora"
 private const val KEY_NOTIF_MIN  = "notif_min"
 private const val KEY_NOTIF_SET  = "notif_programada"
+// Guardamos también el millis exacto del objetivo para comparar con precisión
+private const val KEY_NOTIF_MILLIS = "notif_millis"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,24 +35,33 @@ fun RimuSuenoScreen(
     viewModel: IngenieriaConductualViewModel
 ) {
     val context = LocalContext.current
+    val prefs   = remember { context.getSharedPreferences(PREFS_SUENO, android.content.Context.MODE_PRIVATE) }
 
-    // FIX: restore persisted state so user sees what they scheduled after leaving the screen
-    val prefs = remember { context.getSharedPreferences(PREFS_SUENO, android.content.Context.MODE_PRIVATE) }
-
-    var horaDespertar by remember { mutableIntStateOf(7) }
-    var minDespertar  by remember { mutableIntStateOf(0) }
+    var horaDespertar  by remember { mutableIntStateOf(7) }
+    var minDespertar   by remember { mutableIntStateOf(0) }
     var showTimePicker by remember { mutableStateOf(false) }
     var bedtimeSeleccionado by remember { mutableStateOf<Triple<Int, Int, Int>?>(null) }
 
-    // FIX: persist whether a notification was scheduled and for what time
-    var notifProgramada by remember {
-        mutableStateOf(prefs.getBoolean(KEY_NOTIF_SET, false))
-    }
-    var notifHoraGuardada by remember {
-        mutableIntStateOf(prefs.getInt(KEY_NOTIF_HORA, -1))
-    }
-    var notifMinGuardado by remember {
-        mutableIntStateOf(prefs.getInt(KEY_NOTIF_MIN, -1))
+    var notifProgramada     by remember { mutableStateOf(prefs.getBoolean(KEY_NOTIF_SET, false)) }
+    var notifHoraGuardada   by remember { mutableIntStateOf(prefs.getInt(KEY_NOTIF_HORA, -1)) }
+    var notifMinGuardado    by remember { mutableIntStateOf(prefs.getInt(KEY_NOTIF_MIN, -1)) }
+    var notifMillisGuardado by remember { mutableLongStateOf(prefs.getLong(KEY_NOTIF_MILLIS, -1L)) }
+
+    // ── Auto-reset: si ya pasó la hora de la notificación, limpiar el estado ──
+    LaunchedEffect(Unit) {
+        if (notifProgramada && notifMillisGuardado > 0) {
+            val ahora = System.currentTimeMillis()
+            if (ahora >= notifMillisGuardado) {
+                prefs.edit()
+                    .putBoolean(KEY_NOTIF_SET, false)
+                    .putLong(KEY_NOTIF_MILLIS, -1L)
+                    .apply()
+                notifProgramada     = false
+                notifHoraGuardada   = -1
+                notifMinGuardado    = -1
+                notifMillisGuardado = -1L
+            }
+        }
     }
 
     val timePickerState = rememberTimePickerState(
@@ -81,7 +93,7 @@ fun RimuSuenoScreen(
                         state = timePickerState,
                         colors = TimePickerDefaults.colors(
                             clockDialColor = Color(0xFF2A2A2A),
-                            selectorColor = Color(0xFF4CAF50),
+                            selectorColor  = Color(0xFF4CAF50),
                             containerColor = Color(0xFF1A1A1A)
                         )
                     )
@@ -110,18 +122,18 @@ fun RimuSuenoScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // FIX: show active notification banner if one is already scheduled
+        // Banner de notificación activa
         if (notifProgramada && notifHoraGuardada >= 0) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color(0xFF4CAF50).copy(0.08f),
-                shape = RoundedCornerShape(14.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF4CAF50).copy(0.35f))
+                color    = Color(0xFF4CAF50).copy(0.08f),
+                shape    = RoundedCornerShape(14.dp),
+                border   = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF4CAF50).copy(0.35f))
             ) {
                 Row(
                     modifier = Modifier.padding(14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment     = Alignment.CenterVertically
                 ) {
                     Column {
                         Text(
@@ -134,38 +146,36 @@ fun RimuSuenoScreen(
                         )
                     }
                     TextButton(onClick = {
-                        // cancel
                         prefs.edit()
                             .putBoolean(KEY_NOTIF_SET, false)
+                            .putLong(KEY_NOTIF_MILLIS, -1L)
                             .apply()
-                        notifProgramada = false
-                        notifHoraGuardada = -1
-                        notifMinGuardado = -1
+                        notifProgramada     = false
+                        notifHoraGuardada   = -1
+                        notifMinGuardado    = -1
+                        notifMillisGuardado = -1L
                     }) {
                         Text("CANCELAR", color = Color(0xFFFF4444), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(20.dp))
         }
 
-        // Wake time selector
+        // Selector de hora de despertar
         Text("¿A QUÉ HORA NECESITAS DESPERTAR?", color = SecondaryText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
 
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { showTimePicker = true },
-            color = MainCardBackground,
-            shape = RoundedCornerShape(16.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF4CAF50).copy(0.5f))
+            modifier = Modifier.fillMaxWidth().clickable { showTimePicker = true },
+            color    = MainCardBackground,
+            shape    = RoundedCornerShape(16.dp),
+            border   = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF4CAF50).copy(0.5f))
         ) {
             Row(
                 modifier = Modifier.padding(20.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment     = Alignment.CenterVertically
             ) {
                 Text(
                     "%02d:%02d".format(horaDespertar, minDespertar),
@@ -183,8 +193,8 @@ fun RimuSuenoScreen(
         opciones.forEachIndexed { idx, (h, m, ciclos) ->
             val isSelected = bedtimeSeleccionado == Triple(h, m, ciclos)
             val (etiqueta, accentColor) = when (idx) {
-                0 -> "⭐ IDEAL"  to Color(0xFF4CAF50)
-                1 -> "✅ BUENO"  to Color(0xFFFFD700)
+                0    -> "⭐ IDEAL"  to Color(0xFF4CAF50)
+                1    -> "✅ BUENO"  to Color(0xFFFFD700)
                 else -> "⚡ MÍNIMO" to SecondaryText
             }
 
@@ -193,17 +203,16 @@ fun RimuSuenoScreen(
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
                     .clickable { bedtimeSeleccionado = Triple(h, m, ciclos) },
-                color = if (isSelected) accentColor.copy(0.08f) else MainCardBackground,
-                shape = RoundedCornerShape(16.dp),
+                color  = if (isSelected) accentColor.copy(0.08f) else MainCardBackground,
+                shape  = RoundedCornerShape(16.dp),
                 border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    if (isSelected) accentColor.copy(0.5f) else CardBorderColor
+                    1.dp, if (isSelected) accentColor.copy(0.5f) else CardBorderColor
                 )
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment     = Alignment.CenterVertically
                 ) {
                     Column {
                         Text(
@@ -216,8 +225,8 @@ fun RimuSuenoScreen(
                         )
                     }
                     Surface(
-                        color = accentColor.copy(0.1f),
-                        shape = RoundedCornerShape(8.dp),
+                        color  = accentColor.copy(0.1f),
+                        shape  = RoundedCornerShape(8.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(0.4f))
                     ) {
                         Text(
@@ -229,33 +238,44 @@ fun RimuSuenoScreen(
             }
         }
 
-        // Schedule notification button
+        // Botón de programar notificación
         bedtimeSeleccionado?.let { (h, m, _) ->
             Spacer(modifier = Modifier.height(24.dp))
 
-            // FIX: correct "60 min before h:m" calculation
-            val totalMinBed = h * 60 + m
+            // Calcula la hora de la notificación (60 min antes de la hora de dormir)
+            val totalMinBed   = h * 60 + m
             val totalMinNotif = (totalMinBed - 60 + 24 * 60) % (24 * 60)
-            val notifH = totalMinNotif / 60
-            val notifM = totalMinNotif % 60
+            val notifH        = totalMinNotif / 60
+            val notifM        = totalMinNotif % 60
+
+            // Millis exacto de cuando debe dispararse la notificación
+            val notifMillis = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, notifH)
+                set(Calendar.MINUTE, notifM)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                // Si ya pasó hoy, programar para mañana
+                if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
+            }.timeInMillis
 
             if (!notifProgramada) {
                 Button(
                     onClick = {
                         viewModel.programarNotificacionSueno(h, m)
-                        // FIX: persist so user sees it after coming back
                         prefs.edit()
                             .putBoolean(KEY_NOTIF_SET, true)
                             .putInt(KEY_NOTIF_HORA, notifH)
                             .putInt(KEY_NOTIF_MIN, notifM)
+                            .putLong(KEY_NOTIF_MILLIS, notifMillis)
                             .apply()
-                        notifProgramada = true
-                        notifHoraGuardada = notifH
-                        notifMinGuardado  = notifM
+                        notifProgramada     = true
+                        notifHoraGuardada   = notifH
+                        notifMinGuardado    = notifM
+                        notifMillisGuardado = notifMillis
                     },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                    shape = RoundedCornerShape(14.dp)
+                    colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                    shape    = RoundedCornerShape(14.dp)
                 ) {
                     Text(
                         "🔔 AVÍSAME A LAS %02d:%02d".format(notifH, notifM),

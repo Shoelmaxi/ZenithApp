@@ -30,8 +30,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.zenithapp20.ui.theme.*
+import com.example.zenithapp20.ui.viewmodel.DeepWorkTimerState
 import com.example.zenithapp20.ui.viewmodel.IngenieriaConductualViewModel
-import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -42,51 +42,38 @@ fun RimuDeepWorkScreen(
     navController: NavController,
     viewModel: IngenieriaConductualViewModel
 ) {
-    val sesiones by viewModel.sesionesDeepWork.collectAsState()
-    val context  = LocalContext.current
+    val sesiones     by viewModel.sesionesDeepWork.collectAsState()
+    val timerState   by viewModel.dwTimerState.collectAsState()
+    val context      = LocalContext.current
 
-    var duracionObjetivo       by remember { mutableIntStateOf(60) }
-    var intencion              by remember { mutableStateOf("") }
-    var dificultadPercibida    by remember { mutableFloatStateOf(5f) }
-    var isRunning              by remember { mutableStateOf(false) }
-    var isPaused               by remember { mutableStateOf(false) }
-    var timeLeft               by remember { mutableLongStateOf(60 * 60L) }
-    var distracciones          by remember { mutableIntStateOf(0) }
-    var duracionRealSeg        by remember { mutableLongStateOf(0L) }
-    var showResult             by remember { mutableStateOf(false) }
-    var notaPost               by remember { mutableStateOf("") }
+    // Configuración pre-sesión (local — no importa si se pierde en rotación)
+    var duracionObjetivo    by remember { mutableIntStateOf(60) }
+    var intencion           by remember { mutableStateOf("") }
+    var dificultadPercibida by remember { mutableFloatStateOf(5f) }
+    var notaPost            by remember { mutableStateOf("") }
 
-    // ── Pantalla encendida solo cuando hay sesión activa ──────────────────
-    DisposableEffect(isRunning) {
+    // Sincronizar duracionObjetivo con el estado del VM cuando hay sesión activa
+    LaunchedEffect(timerState.isRunning) {
+        if (timerState.isRunning) duracionObjetivo = timerState.duracionObjetivoMin
+    }
+
+    // Pantalla encendida mientras el timer corre
+    DisposableEffect(timerState.isRunning) {
         val window = (context as Activity).window
-        if (isRunning) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        else           window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        onDispose    { window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+        if (timerState.isRunning) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onDispose { window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     }
 
-    val totalSeg = duracionObjetivo * 60L
-    val progress = if (totalSeg > 0) timeLeft.toFloat() / totalSeg else 0f
-
-    LaunchedEffect(isRunning, isPaused) {
-        if (isRunning && !isPaused) {
-            while (timeLeft > 0 && isRunning && !isPaused) {
-                delay(1000L)
-                timeLeft--
-                duracionRealSeg++
-            }
-            if (timeLeft <= 0 && isRunning) {
-                isRunning = false
-                viewModel.guardarSesionDeepWork(duracionObjetivo, duracionRealSeg, distracciones)
-                showResult = true
-            }
-        }
-    }
+    val totalSeg = timerState.duracionObjetivoMin * 60L
+    val progress = if (totalSeg > 0) timerState.timeLeftSeg.toFloat() / totalSeg else 0f
 
     val colorTimer by animateColorAsState(
         targetValue = when {
-            !isRunning    -> Color(0xFF888888)
-            distracciones > 3 -> Color(0xFFFF4444)
-            else          -> Color(0xFF00C853)
+            !timerState.isRunning  -> Color(0xFF888888)
+            timerState.isPaused    -> Color(0xFFFFD700)
+            timerState.distracciones > 3 -> Color(0xFFFF4444)
+            else                   -> Color(0xFF00C853)
         },
         animationSpec = tween(600),
         label = "timer_color"
@@ -96,38 +83,31 @@ fun RimuDeepWorkScreen(
         modifier       = Modifier.fillMaxSize().background(DeepBackground),
         contentPadding = PaddingValues(bottom = 40.dp)
     ) {
-        // ── Cabecera ──────────────────────────────────────────────────────
+        // Cabecera
         item {
             Spacer(modifier = Modifier.height(48.dp))
             DeepWorkHeader(
                 navController = navController,
-                isRunning     = isRunning,
-                intencion     = intencion
+                isRunning     = timerState.isRunning,
+                intencion     = timerState.intencion
             )
         }
 
-        // ── Timer circular ────────────────────────────────────────────────
+        // Timer circular
         item {
             DeepWorkTimerCircle(
-                timeLeft        = timeLeft,
-                progress        = progress,
-                colorTimer      = colorTimer,
-                isRunning       = isRunning,
-                isPaused        = isPaused,
-                distracciones   = distracciones,
-                duracionRealSeg = duracionRealSeg
+                timerState  = timerState,
+                progress    = progress,
+                colorTimer  = colorTimer
             )
         }
 
-        // ── Config pre-sesión (solo si no está corriendo) ─────────────────
-        if (!isRunning) {
+        // Config pre-sesión (solo si no está corriendo)
+        if (!timerState.isRunning) {
             item { Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                DeepWorkIntentionField(
-                    intencion = intencion,
-                    onchange  = { intencion = it }
-                )
+                DeepWorkIntentionField(intencion = intencion, onchange = { intencion = it })
             }
 
             item { Spacer(modifier = Modifier.height(20.dp)) }
@@ -135,14 +115,8 @@ fun RimuDeepWorkScreen(
             item {
                 DeepWorkDurationSelector(
                     duracionObjetivo = duracionObjetivo,
-                    onPresetSelect   = { min ->
-                        duracionObjetivo = min
-                        timeLeft         = min * 60L
-                    },
-                    onSliderChange = { min ->
-                        duracionObjetivo = min
-                        timeLeft         = min * 60L
-                    }
+                    onPresetSelect   = { duracionObjetivo = it },
+                    onSliderChange   = { duracionObjetivo = it }
                 )
             }
 
@@ -158,12 +132,12 @@ fun RimuDeepWorkScreen(
             item { Spacer(modifier = Modifier.height(20.dp)) }
         }
 
-        // ── Botón de distracción (solo corriendo) ─────────────────────────
-        if (isRunning && !isPaused) {
+        // Botón de distracción (solo corriendo y no pausado)
+        if (timerState.isRunning && !timerState.isPaused) {
             item {
                 Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
                     Button(
-                        onClick  = { distracciones++ },
+                        onClick  = { viewModel.registrarDistraccionDeepWork() },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF4444).copy(0.15f)),
                         shape    = RoundedCornerShape(16.dp),
@@ -180,32 +154,20 @@ fun RimuDeepWorkScreen(
             }
         }
 
-        // ── Controles ─────────────────────────────────────────────────────
+        // Controles
         item {
             DeepWorkControls(
-                isRunning       = isRunning,
-                isPaused        = isPaused,
-                duracionRealSeg = duracionRealSeg,
+                timerState = timerState,
                 onStart = {
-                    timeLeft        = duracionObjetivo * 60L
-                    duracionRealSeg = 0L
-                    distracciones   = 0
-                    isPaused        = false
-                    isRunning       = true
+                    viewModel.iniciarDeepWork(duracionObjetivo, intencion)
                 },
-                onTogglePause = { isPaused = !isPaused },
-                onStop = {
-                    if (duracionRealSeg > 0) {
-                        viewModel.guardarSesionDeepWork(duracionObjetivo, duracionRealSeg, distracciones)
-                        showResult = true
-                    }
-                    isRunning = false
-                }
+                onTogglePause = { viewModel.togglePausaDeepWork() },
+                onStop        = { viewModel.terminarDeepWorkManual() }
             )
         }
 
-        // ── Historial (solo si no está corriendo) ─────────────────────────
-        if (sesiones.isNotEmpty() && !isRunning) {
+        // Historial (solo si no está corriendo)
+        if (sesiones.isNotEmpty() && !timerState.isRunning) {
             item {
                 Spacer(modifier = Modifier.height(32.dp))
                 Text(
@@ -223,29 +185,23 @@ fun RimuDeepWorkScreen(
         }
     }
 
-    // ── Diálogo de resultado ──────────────────────────────────────────────
-    if (showResult) {
+    // Diálogo de resultado
+    if (timerState.showResult) {
         DeepWorkResultDialog(
-            duracionRealSeg  = duracionRealSeg,
-            duracionObjetivo = duracionObjetivo,
-            distracciones    = distracciones,
-            intencion        = intencion,
-            notaPost         = notaPost,
-            onNotaChange     = { notaPost = it },
-            onClose          = {
-                showResult      = false
-                timeLeft        = duracionObjetivo * 60L
-                duracionRealSeg = 0L
-                distracciones   = 0
-                notaPost        = ""
-                intencion       = ""
+            timerState   = timerState,
+            notaPost     = notaPost,
+            onNotaChange = { notaPost = it },
+            onClose      = {
+                viewModel.cerrarResultadoDeepWork()
+                notaPost  = ""
+                intencion = ""
             }
         )
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Subcomponentes de Deep Work
+//  Subcomponentes
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
@@ -272,14 +228,16 @@ private fun DeepWorkHeader(
 
 @Composable
 private fun DeepWorkTimerCircle(
-    timeLeft: Long,
+    timerState: DeepWorkTimerState,
     progress: Float,
-    colorTimer: Color,
-    isRunning: Boolean,
-    isPaused: Boolean,
-    distracciones: Int,
-    duracionRealSeg: Long
+    colorTimer: Color
 ) {
+    val timeLeft        = timerState.timeLeftSeg
+    val isRunning       = timerState.isRunning
+    val isPaused        = timerState.isPaused
+    val distracciones   = timerState.distracciones
+    val duracionRealSeg = timerState.duracionRealSeg
+
     Box(
         modifier         = Modifier.fillMaxWidth().padding(top = 24.dp),
         contentAlignment = Alignment.Center
@@ -297,9 +255,7 @@ private fun DeepWorkTimerCircle(
             )
             drawArc(
                 color = colorTimer,
-                startAngle = -90f,
-                sweepAngle = 360f * progress,
-                useCenter  = false,
+                startAngle = -90f, sweepAngle = 360f * progress, useCenter = false,
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
                 topLeft = topLeft, size = arcSize
             )
@@ -307,16 +263,15 @@ private fun DeepWorkTimerCircle(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 "%02d:%02d".format(timeLeft / 60, timeLeft % 60),
-                color      = Color.White,
-                fontSize   = 48.sp,
-                fontWeight = FontWeight.Light
+                color = Color.White, fontSize = 48.sp, fontWeight = FontWeight.Light
             )
             Text(
-                if (!isRunning) "LISTO" else if (isPaused) "PAUSADO" else "ENFOCADO",
-                color         = colorTimer,
-                fontSize      = 11.sp,
-                fontWeight    = FontWeight.Black,
-                letterSpacing = 3.sp
+                when {
+                    !isRunning -> "LISTO"
+                    isPaused   -> "PAUSADO"
+                    else       -> "ENFOCADO"
+                },
+                color = colorTimer, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp
             )
             if (isRunning && duracionRealSeg > 0) {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -347,10 +302,10 @@ private fun DeepWorkIntentionField(intencion: String, onchange: (String) -> Unit
                     color = SecondaryText.copy(0.4f), fontSize = 13.sp
                 )
             },
-            modifier       = Modifier.fillMaxWidth(),
-            maxLines       = 2,
+            modifier        = Modifier.fillMaxWidth(),
+            maxLines        = 2,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            colors         = OutlinedTextFieldDefaults.colors(
+            colors          = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor   = Color(0xFF2196F3),
                 unfocusedBorderColor = CardBorderColor,
                 focusedTextColor     = Color.White,
@@ -375,16 +330,10 @@ private fun DeepWorkDurationSelector(
             verticalAlignment     = Alignment.CenterVertically
         ) {
             Text("DURACIÓN", color = SecondaryText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            Text(
-                "$duracionObjetivo min",
-                color = Color(0xFF2196F3), fontSize = 18.sp, fontWeight = FontWeight.Black
-            )
+            Text("$duracionObjetivo min", color = Color(0xFF2196F3), fontSize = 18.sp, fontWeight = FontWeight.Black)
         }
         Spacer(modifier = Modifier.height(10.dp))
-        Row(
-            modifier              = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DURACIONES.forEach { min ->
                 val isSelected = duracionObjetivo == min
                 Surface(
@@ -414,9 +363,9 @@ private fun DeepWorkDurationSelector(
             onValueChange = { onSliderChange((it / 5).toInt() * 5) },
             valueRange    = 15f..180f,
             colors        = SliderDefaults.colors(
-                thumbColor          = Color(0xFF2196F3),
-                activeTrackColor    = Color(0xFF2196F3),
-                inactiveTrackColor  = Color.White.copy(0.1f)
+                thumbColor         = Color(0xFF2196F3),
+                activeTrackColor   = Color(0xFF2196F3),
+                inactiveTrackColor = Color.White.copy(0.1f)
             )
         )
     }
@@ -451,22 +400,12 @@ private fun DeepWorkDifficultySlider(dificultad: Float, onChange: (Float) -> Uni
                 inactiveTrackColor = Color.White.copy(0.1f)
             )
         )
-        Text(
-            when {
-                dificultad >= 8 -> "Tarea muy difícil — espera más distracciones"
-                dificultad >= 5 -> "Dificultad media"
-                else            -> "Tarea fluida — buen momento para el deep work"
-            },
-            color = SecondaryText, fontSize = 10.sp
-        )
     }
 }
 
 @Composable
 private fun DeepWorkControls(
-    isRunning: Boolean,
-    isPaused: Boolean,
-    duracionRealSeg: Long,
+    timerState: DeepWorkTimerState,
     onStart: () -> Unit,
     onTogglePause: () -> Unit,
     onStop: () -> Unit
@@ -475,7 +414,7 @@ private fun DeepWorkControls(
         modifier              = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        if (!isRunning) {
+        if (!timerState.isRunning) {
             Button(
                 onClick  = onStart,
                 modifier = Modifier.weight(1f).height(56.dp),
@@ -489,12 +428,12 @@ private fun DeepWorkControls(
                 onClick  = onTogglePause,
                 modifier = Modifier.weight(1f).height(56.dp),
                 colors   = ButtonDefaults.buttonColors(
-                    containerColor = if (isPaused) Color(0xFF4CAF50) else Color.White.copy(0.1f)
+                    containerColor = if (timerState.isPaused) Color(0xFF4CAF50) else Color.White.copy(0.1f)
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Text(
-                    if (isPaused) "REANUDAR" else "PAUSAR",
+                    if (timerState.isPaused) "REANUDAR" else "PAUSAR",
                     color = Color.White, fontWeight = FontWeight.Bold
                 )
             }
@@ -550,14 +489,16 @@ private fun DeepWorkHistoryRow(sesion: com.example.zenithapp20.data.model.Sesion
 
 @Composable
 private fun DeepWorkResultDialog(
-    duracionRealSeg: Long,
-    duracionObjetivo: Int,
-    distracciones: Int,
-    intencion: String,
+    timerState: DeepWorkTimerState,
     notaPost: String,
     onNotaChange: (String) -> Unit,
     onClose: () -> Unit
 ) {
+    val duracionRealSeg  = timerState.duracionRealSeg
+    val duracionObjetivo = timerState.duracionObjetivoMin
+    val distracciones    = timerState.distracciones
+    val intencion        = timerState.intencion
+
     AlertDialog(
         onDismissRequest = { },
         containerColor   = Color(0xFF1A1A1A),

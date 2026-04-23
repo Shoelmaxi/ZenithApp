@@ -25,7 +25,6 @@ fun RimuSistemaScreen(
     navController: NavController,
     viewModel: IngenieriaConductualViewModel
 ) {
-    val rachaPoder  by viewModel.rachaPoder.collectAsState()
     val sesiones    by viewModel.sesionesDeepWork.collectAsState()
     val analisis    by viewModel.analisis.collectAsState()
 
@@ -37,9 +36,8 @@ fun RimuSistemaScreen(
         sesiones.maxOfOrNull { it.duracionRealMin } ?: 0
     }
 
-    // Stats rápidas del AAA para el badge
-    val totalAnalisis  = analisis.size
-    val promedioFocus  = analisis
+    val totalAnalisis = analisis.size
+    val promedioFocus = analisis
         .filter { it.completado && it.focusLevel > 0 }
         .map { it.focusLevel }.average()
         .let { if (it.isNaN()) null else it }
@@ -59,14 +57,11 @@ fun RimuSistemaScreen(
             Column {
                 Text(
                     "INGENIERÍA CONDUCTUAL",
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Black
+                    color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black
                 )
                 Text(
                     "Sistema de Alto Rendimiento",
-                    color = SecondaryText,
-                    fontSize = 11.sp
+                    color = SecondaryText, fontSize = 11.sp
                 )
             }
         }
@@ -75,32 +70,32 @@ fun RimuSistemaScreen(
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(14.dp),
-            contentPadding = PaddingValues(bottom = 40.dp)
+            contentPadding      = PaddingValues(bottom = 40.dp)
         ) {
 
-            // ── ANÁLISIS TRIPLE A → navega a su propia pantalla ──────────
+            // ── ANÁLISIS TRIPLE A ──────────────────────────────────────────
             item {
                 SistemaCard(
-                    emoji = "🎯",
-                    titulo = "Análisis Triple A",
-                    subtitulo = "Acción · Análisis · Ajuste",
+                    emoji       = "🎯",
+                    titulo      = "Análisis Triple A",
+                    subtitulo   = "Acción · Análisis · Ajuste",
                     descripcion = if (totalAnalisis == 0) "Sin registros todavía"
                     else buildString {
                         append("$totalAnalisis registro${if (totalAnalisis != 1) "s" else ""}")
                         promedioFocus?.let { append(" · Focus medio: ${"%.1f".format(it)}") }
                     },
                     accentColor = Color(0xFF4CAF50),
-                    badge = if (totalAnalisis > 0) "$totalAnalisis" else null,
-                    onClick = { navController.navigate("rimu_triple_a") }
+                    badge       = if (totalAnalisis > 0) "$totalAnalisis" else null,
+                    onClick     = { navController.navigate("rimu_triple_a") }
                 )
             }
 
-            // ── DEEP WORK ────────────────────────────────────────────────
+            // ── DEEP WORK ──────────────────────────────────────────────────
             item {
                 SistemaCard(
-                    emoji = "🧠",
-                    titulo = "Deep Work",
-                    subtitulo = "Cronómetro de Enfoque Profundo",
+                    emoji       = "🧠",
+                    titulo      = "Deep Work",
+                    subtitulo   = "Cronómetro de Enfoque Profundo",
                     descripcion = buildString {
                         append("${sesiones.size} sesiones")
                         if (sesiones.isNotEmpty()) {
@@ -109,34 +104,21 @@ fun RimuSistemaScreen(
                         }
                     },
                     accentColor = Color(0xFF2196F3),
-                    badge = if (sesiones.isNotEmpty()) "${sesiones.size}" else null,
-                    onClick = { navController.navigate("rimu_deep_work") }
+                    badge       = if (sesiones.isNotEmpty()) "${sesiones.size}" else null,
+                    onClick     = { navController.navigate("rimu_deep_work") }
                 )
             }
 
-            // ── OPTIMIZADOR CIRCADIANO ────────────────────────────────────
+            // ── OPTIMIZADOR CIRCADIANO ─────────────────────────────────────
             item {
                 SistemaCard(
-                    emoji = "🌙",
-                    titulo = "Optimizador Circadiano",
-                    subtitulo = "Cálculo de ciclos de sueño",
+                    emoji       = "🌙",
+                    titulo      = "Optimizador Circadiano",
+                    subtitulo   = "Cálculo de ciclos de sueño",
                     descripcion = "Basado en ciclos de 90 min + buffer de 15 min",
                     accentColor = Color(0xFF9C27B0),
-                    badge = null,
-                    onClick = { navController.navigate("rimu_sueno") }
-                )
-            }
-
-            // ── INCOMODIDAD VOLUNTARIA ────────────────────────────────────
-            item {
-                SistemaCard(
-                    emoji = "🔱",
-                    titulo = "Incomodidad Voluntaria",
-                    subtitulo = "Tracker de Resiliencia",
-                    descripcion = "Racha de Poder: ${"%.1f".format(rachaPoder)} días",
-                    accentColor = Color(0xFFFFD700),
-                    badge = if (rachaPoder >= 7) "⚡ FUERTE" else null,
-                    onClick = { navController.navigate("rimu_resiliencia") }
+                    badge       = null,
+                    onClick     = { navController.navigate("rimu_sueno") }
                 )
             }
         }
@@ -144,7 +126,7 @@ fun RimuSistemaScreen(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  SISTEMA CARD (genérica)
+//  SISTEMA CARD
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
@@ -161,12 +143,12 @@ private fun SistemaCard(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
-        color = MainCardBackground,
-        shape = RoundedCornerShape(20.dp),
+        color  = MainCardBackground,
+        shape  = RoundedCornerShape(20.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(0.25f))
     ) {
         Row(
-            modifier = Modifier.padding(18.dp),
+            modifier          = Modifier.padding(18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -191,16 +173,16 @@ private fun SistemaCard(
             badge?.let {
                 Spacer(modifier = Modifier.width(8.dp))
                 Surface(
-                    color = accentColor.copy(0.1f),
-                    shape = RoundedCornerShape(8.dp),
+                    color  = accentColor.copy(0.1f),
+                    shape  = RoundedCornerShape(8.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(0.4f))
                 ) {
                     Text(
                         it,
-                        color = accentColor,
-                        fontSize = 9.sp,
+                        color      = accentColor,
+                        fontSize   = 9.sp,
                         fontWeight = FontWeight.Black,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                        modifier   = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                     )
                 }
             }

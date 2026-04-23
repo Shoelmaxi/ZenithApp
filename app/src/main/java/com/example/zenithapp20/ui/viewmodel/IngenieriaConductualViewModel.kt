@@ -7,10 +7,26 @@ import androidx.work.*
 import com.example.zenithapp20.data.dao.*
 import com.example.zenithapp20.data.model.*
 import com.example.zenithapp20.ui.utils.NotificacionSuenoWorker
+import com.example.zenithapp20.utils.DeepWorkForegroundService
+import com.example.zenithapp20.utils.DeepWorkNotifState
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
+
+// ── Estado del timer de Deep Work ─────────────────────────────────────────────
+data class DeepWorkTimerState(
+    val isRunning: Boolean = false,
+    val isPaused: Boolean = false,
+    val timeLeftSeg: Long = 3600L,
+    val duracionObjetivoMin: Int = 60,
+    val duracionRealSeg: Long = 0L,
+    val distracciones: Int = 0,
+    val intencion: String = "",
+    val showResult: Boolean = false
+)
 
 class IngenieriaConductualViewModel(
     private val analisisDao: AnalisisHabitoDao,
@@ -31,15 +47,114 @@ class IngenieriaConductualViewModel(
     val sesionesDeepWork: StateFlow<List<SesionDeepWork>> = deepWorkDao.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _dwTimerState = MutableStateFlow(DeepWorkTimerState())
+    val dwTimerState: StateFlow<DeepWorkTimerState> = _dwTimerState.asStateFlow()
+
+    private var dwTimerJob: Job? = null
+
+    fun iniciarDeepWork(duracionMin: Int, intencion: String) {
+        dwTimerJob?.cancel()
+        _dwTimerState.value = DeepWorkTimerState(
+            isRunning = true,
+            isPaused = false,
+            timeLeftSeg = duracionMin * 60L,
+            duracionObjetivoMin = duracionMin,
+            duracionRealSeg = 0L,
+            distracciones = 0,
+            intencion = intencion,
+            showResult = false
+        )
+        DeepWorkForegroundService.iniciar(context)
+        lanzarTimerJob()
+    }
+
+    fun togglePausaDeepWork() {
+        val state = _dwTimerState.value
+        if (!state.isRunning) return
+        if (state.isPaused) {
+            _dwTimerState.value = state.copy(isPaused = false)
+            lanzarTimerJob()
+        } else {
+            dwTimerJob?.cancel()
+            _dwTimerState.value = state.copy(isPaused = true)
+            actualizarNotifDeepWork()
+        }
+    }
+
+    fun registrarDistraccionDeepWork() {
+        _dwTimerState.value = _dwTimerState.value.copy(
+            distracciones = _dwTimerState.value.distracciones + 1
+        )
+        actualizarNotifDeepWork()
+    }
+
+    fun terminarDeepWorkManual() {
+        dwTimerJob?.cancel()
+        val state = _dwTimerState.value
+        if (state.duracionRealSeg > 0) {
+            guardarSesionDeepWork(state.duracionObjetivoMin, state.duracionRealSeg, state.distracciones)
+            _dwTimerState.value = state.copy(isRunning = false, isPaused = false, showResult = true)
+        } else {
+            _dwTimerState.value = DeepWorkTimerState()
+        }
+        DeepWorkForegroundService.detener(context)
+    }
+
+    fun cerrarResultadoDeepWork() {
+        _dwTimerState.value = DeepWorkTimerState()
+    }
+
+    private fun lanzarTimerJob() {
+        dwTimerJob?.cancel()
+        dwTimerJob = viewModelScope.launch {
+            while (true) {
+                delay(1000L)
+                val state = _dwTimerState.value
+                if (!state.isRunning || state.isPaused) break
+                val nuevaTimeLeft = state.timeLeftSeg - 1
+                val nuevaRealSeg = state.duracionRealSeg + 1
+                _dwTimerState.value = state.copy(
+                    timeLeftSeg = nuevaTimeLeft,
+                    duracionRealSeg = nuevaRealSeg
+                )
+                actualizarNotifDeepWork()
+                if (nuevaTimeLeft <= 0) {
+                    // Sesión completada
+                    guardarSesionDeepWork(state.duracionObjetivoMin, nuevaRealSeg, state.distracciones)
+                    _dwTimerState.value = _dwTimerState.value.copy(
+                        isRunning = false,
+                        isPaused = false,
+                        showResult = true
+                    )
+                    DeepWorkForegroundService.detener(context)
+                    break
+                }
+            }
+        }
+    }
+
+    private fun actualizarNotifDeepWork() {
+        val state = _dwTimerState.value
+        DeepWorkForegroundService.actualizar(
+            context,
+            DeepWorkNotifState(
+                timeLeftStr = "%02d:%02d".format(state.timeLeftSeg / 60, state.timeLeftSeg % 60),
+                intencion = state.intencion,
+                distracciones = state.distracciones,
+                isPaused = state.isPaused
+            )
+        )
+    }
+
     fun guardarSesionDeepWork(duracionObjetivoMin: Int, duracionRealSegundos: Long, distracciones: Int) {
         val calidad = duracionRealSegundos.toFloat() / (distracciones + 1)
         viewModelScope.launch {
             deepWorkDao.insert(
                 SesionDeepWork(
-                    duracionObjetivoMin    = duracionObjetivoMin,
-                    duracionRealSegundos   = duracionRealSegundos,
-                    distracciones          = distracciones,
-                    calidadSesion          = calidad
+                    duracionObjetivoMin  = duracionObjetivoMin,
+                    duracionRealSegundos = duracionRealSegundos,
+                    distracciones        = distracciones,
+                    calidadSesion        = calidad
                 )
             )
         }
@@ -95,10 +210,6 @@ class IngenieriaConductualViewModel(
         }
     }
 
-    /**
-     * Día perfecto → racha + 1
-     * Día fallido   → racha × 0.5 (nunca a 0, mantiene impulso psicológico)
-     */
     private fun calcularRachaPoder(registros: List<RegistroResiliencia>): Float {
         var racha = 0f
         registros.sortedBy { it.fechaDia }.forEach { registro ->
@@ -108,7 +219,6 @@ class IngenieriaConductualViewModel(
     }
 
     // ── Sleep Calculator ──────────────────────────────────────────────────────
-    /** Retorna lista de Triple(hora, minuto, ciclos) para dormir */
     fun calcularHorasDormir(horaDespertar: Int, minDespertar: Int): List<Triple<Int, Int, Int>> {
         return listOf(6, 5, 4).map { ciclos ->
             val totalMin = ciclos * 90 + 15
@@ -118,7 +228,6 @@ class IngenieriaConductualViewModel(
         }
     }
 
-    /** Programa notificación 60 min antes de la hora de dormir elegida */
     fun programarNotificacionSueno(horaDormir: Int, minDormir: Int) {
         val ahora = Calendar.getInstance()
         val objetivo = Calendar.getInstance().apply {
@@ -137,6 +246,15 @@ class IngenieriaConductualViewModel(
                 .setInitialDelay(delay, TimeUnit.MILLISECONDS)
                 .build()
         )
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        dwTimerJob?.cancel()
+        // Si el timer estaba corriendo y se limpió el VM (poco probable pero por seguridad)
+        if (_dwTimerState.value.isRunning) {
+            DeepWorkForegroundService.detener(context)
+        }
     }
 
     private fun inicioDiaHoy(): Long = Calendar.getInstance().apply {

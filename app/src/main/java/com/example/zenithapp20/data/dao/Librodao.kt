@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface LibroDao {
 
-    // Orden: Leyendo primero, luego Pendiente, Terminado, Abandonado
     @Query("""
         SELECT * FROM libros
         ORDER BY
@@ -26,6 +25,10 @@ interface LibroDao {
 
     @Query("SELECT * FROM libros WHERE id = :id LIMIT 1")
     suspend fun getLibroByIdSync(id: Long): Libro?
+
+    // Para El Oráculo — lectura directa sin Flow
+    @Query("SELECT * FROM libros")
+    suspend fun getAllLibrosSync(): List<Libro>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLibro(libro: Libro)
