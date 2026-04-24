@@ -16,7 +16,35 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
+// ── Rango de Integridad ───────────────────────────────────────────────────────
+
+enum class RangoIntegridad(
+    val letra: String,
+    val label: String,
+    val color: Long,
+    val minPct: Int
+) {
+    S("S", "Élite",        0xFF00C853, 90),
+    A("A", "Alto",         0xFF4CAF50, 80),
+    B("B", "Sólido",       0xFFFFD700, 70),
+    C("C", "Regular",      0xFFFF9800, 55),
+    D("D", "Inconsistente",0xFFFF4444, 40),
+    E("E", "Crítico",      0xFF888888,  0)
+}
+
+data class IntegrityStats(
+    val rango: RangoIntegridad,
+    val porcentaje: Int,          // 0-100
+    val completados: Int,
+    val totalRegistros: Int,
+    val diasAnalizados: Int = 30
+)
+
+fun calcularRango(pct: Int): RangoIntegridad =
+    RangoIntegridad.entries.first { pct >= it.minPct }
+
 // ── Estado del timer de Deep Work ─────────────────────────────────────────────
+
 data class DeepWorkTimerState(
     val isRunning: Boolean = false,
     val isPaused: Boolean = false,
@@ -35,13 +63,46 @@ class IngenieriaConductualViewModel(
     private val context: Context
 ) : ViewModel() {
 
-    // ── AAA ──────────────────────────────────────────────────────────────────
+    // ── AAA ───────────────────────────────────────────────────────────────────
     val analisis: StateFlow<List<AnalisisHabito>> = analisisDao.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun guardarAnalisis(analisis: AnalisisHabito) {
         viewModelScope.launch { analisisDao.insert(analisis) }
     }
+
+    // ── Rango de Integridad ───────────────────────────────────────────────────
+    // Calcula sobre los últimos 30 días para que sea recuperable y justo.
+    // Fórmula: completados / total de registros AAA en ese período.
+
+    val integrityStats: StateFlow<IntegrityStats?> = analisis
+        .map { lista ->
+            if (lista.isEmpty()) return@map null
+
+            val hace30Dias = Calendar.getInstance().apply {
+                add(Calendar.DAY_OF_YEAR, -30)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+
+            val ultimos30 = lista.filter { it.fechaMillis >= hace30Dias }
+            if (ultimos30.isEmpty()) return@map null
+
+            val completados = ultimos30.count { it.completado }
+            val total       = ultimos30.size
+            val pct         = ((completados.toFloat() / total) * 100).toInt()
+            val rango       = calcularRango(pct)
+
+            IntegrityStats(
+                rango          = rango,
+                porcentaje     = pct,
+                completados    = completados,
+                totalRegistros = total
+            )
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     // ── Deep Work ─────────────────────────────────────────────────────────────
     val sesionesDeepWork: StateFlow<List<SesionDeepWork>> = deepWorkDao.getAll()
@@ -55,14 +116,14 @@ class IngenieriaConductualViewModel(
     fun iniciarDeepWork(duracionMin: Int, intencion: String) {
         dwTimerJob?.cancel()
         _dwTimerState.value = DeepWorkTimerState(
-            isRunning = true,
-            isPaused = false,
-            timeLeftSeg = duracionMin * 60L,
+            isRunning          = true,
+            isPaused           = false,
+            timeLeftSeg        = duracionMin * 60L,
             duracionObjetivoMin = duracionMin,
-            duracionRealSeg = 0L,
-            distracciones = 0,
-            intencion = intencion,
-            showResult = false
+            duracionRealSeg    = 0L,
+            distracciones      = 0,
+            intencion          = intencion,
+            showResult         = false
         )
         DeepWorkForegroundService.iniciar(context)
         lanzarTimerJob()
@@ -111,19 +172,18 @@ class IngenieriaConductualViewModel(
                 delay(1000L)
                 val state = _dwTimerState.value
                 if (!state.isRunning || state.isPaused) break
-                val nuevaTimeLeft = state.timeLeftSeg - 1
-                val nuevaRealSeg = state.duracionRealSeg + 1
+                val nuevaTimeLeft  = state.timeLeftSeg - 1
+                val nuevaRealSeg   = state.duracionRealSeg + 1
                 _dwTimerState.value = state.copy(
-                    timeLeftSeg = nuevaTimeLeft,
+                    timeLeftSeg     = nuevaTimeLeft,
                     duracionRealSeg = nuevaRealSeg
                 )
                 actualizarNotifDeepWork()
                 if (nuevaTimeLeft <= 0) {
-                    // Sesión completada
                     guardarSesionDeepWork(state.duracionObjetivoMin, nuevaRealSeg, state.distracciones)
                     _dwTimerState.value = _dwTimerState.value.copy(
-                        isRunning = false,
-                        isPaused = false,
+                        isRunning  = false,
+                        isPaused   = false,
                         showResult = true
                     )
                     DeepWorkForegroundService.detener(context)
@@ -138,10 +198,10 @@ class IngenieriaConductualViewModel(
         DeepWorkForegroundService.actualizar(
             context,
             DeepWorkNotifState(
-                timeLeftStr = "%02d:%02d".format(state.timeLeftSeg / 60, state.timeLeftSeg % 60),
-                intencion = state.intencion,
+                timeLeftStr   = "%02d:%02d".format(state.timeLeftSeg / 60, state.timeLeftSeg % 60),
+                intencion     = state.intencion,
                 distracciones = state.distracciones,
-                isPaused = state.isPaused
+                isPaused      = state.isPaused
             )
         )
     }
@@ -177,7 +237,7 @@ class IngenieriaConductualViewModel(
 
     private suspend fun cargarRegistroHoy() {
         val hoy = inicioDiaHoy()
-        var r = resilienciaDao.getDeHoy(hoy)
+        var r   = resilienciaDao.getDeHoy(hoy)
         if (r == null) {
             resilienciaDao.insert(RegistroResiliencia(fechaDia = hoy))
             r = resilienciaDao.getDeHoy(hoy)
@@ -221,7 +281,7 @@ class IngenieriaConductualViewModel(
     // ── Sleep Calculator ──────────────────────────────────────────────────────
     fun calcularHorasDormir(horaDespertar: Int, minDespertar: Int): List<Triple<Int, Int, Int>> {
         return listOf(6, 5, 4).map { ciclos ->
-            val totalMin = ciclos * 90 + 15
+            val totalMin   = ciclos * 90 + 15
             var minTotales = horaDespertar * 60 + minDespertar - totalMin
             if (minTotales < 0) minTotales += 24 * 60
             Triple((minTotales / 60) % 24, minTotales % 60, ciclos)
@@ -229,7 +289,7 @@ class IngenieriaConductualViewModel(
     }
 
     fun programarNotificacionSueno(horaDormir: Int, minDormir: Int) {
-        val ahora = Calendar.getInstance()
+        val ahora   = Calendar.getInstance()
         val objetivo = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, horaDormir)
             set(Calendar.MINUTE, minDormir)
@@ -251,7 +311,6 @@ class IngenieriaConductualViewModel(
     override fun onCleared() {
         super.onCleared()
         dwTimerJob?.cancel()
-        // Si el timer estaba corriendo y se limpió el VM (poco probable pero por seguridad)
         if (_dwTimerState.value.isRunning) {
             DeepWorkForegroundService.detener(context)
         }
