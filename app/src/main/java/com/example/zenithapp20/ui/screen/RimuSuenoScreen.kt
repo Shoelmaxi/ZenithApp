@@ -1,5 +1,9 @@
 package com.example.zenithapp20.ui.screen
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,12 +25,12 @@ import com.example.zenithapp20.ui.theme.*
 import com.example.zenithapp20.ui.viewmodel.IngenieriaConductualViewModel
 import java.util.Calendar
 
-private const val PREFS_SUENO   = "zenith_sueno_prefs"
-private const val KEY_NOTIF_HORA = "notif_hora"
-private const val KEY_NOTIF_MIN  = "notif_min"
-private const val KEY_NOTIF_SET  = "notif_programada"
-// Guardamos también el millis exacto del objetivo para comparar con precisión
+private const val PREFS_SUENO      = "zenith_sueno_prefs"
+private const val KEY_NOTIF_HORA   = "notif_hora"
+private const val KEY_NOTIF_MIN    = "notif_min"
+private const val KEY_NOTIF_SET    = "notif_programada"
 private const val KEY_NOTIF_MILLIS = "notif_millis"
+private const val KEY_BLACKOUT_SET = "blackout_programado"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,28 +50,26 @@ fun RimuSuenoScreen(
     var notifHoraGuardada   by remember { mutableIntStateOf(prefs.getInt(KEY_NOTIF_HORA, -1)) }
     var notifMinGuardado    by remember { mutableIntStateOf(prefs.getInt(KEY_NOTIF_MIN, -1)) }
     var notifMillisGuardado by remember { mutableLongStateOf(prefs.getLong(KEY_NOTIF_MILLIS, -1L)) }
+    var blackoutProgramado  by remember { mutableStateOf(prefs.getBoolean(KEY_BLACKOUT_SET, false)) }
 
-    // ── Auto-reset: si ya pasó la hora de la notificación, limpiar el estado ──
+    // Permiso de overlay para Blackout
+    val tienePermisoOverlay = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Settings.canDrawOverlays(context)
+        else true
+    }
+
+    // Auto-reset si ya pasó la hora
     LaunchedEffect(Unit) {
-        if (notifProgramada && notifMillisGuardado > 0) {
-            val ahora = System.currentTimeMillis()
-            if (ahora >= notifMillisGuardado) {
-                prefs.edit()
-                    .putBoolean(KEY_NOTIF_SET, false)
-                    .putLong(KEY_NOTIF_MILLIS, -1L)
-                    .apply()
-                notifProgramada     = false
-                notifHoraGuardada   = -1
-                notifMinGuardado    = -1
-                notifMillisGuardado = -1L
-            }
+        if (notifProgramada && notifMillisGuardado > 0 && System.currentTimeMillis() >= notifMillisGuardado) {
+            prefs.edit().putBoolean(KEY_NOTIF_SET, false).putLong(KEY_NOTIF_MILLIS, -1L).apply()
+            notifProgramada     = false; notifHoraGuardada = -1
+            notifMinGuardado    = -1;    notifMillisGuardado = -1L
         }
     }
 
     val timePickerState = rememberTimePickerState(
         initialHour = horaDespertar, initialMinute = minDespertar, is24Hour = true
     )
-
     val opciones = viewModel.calcularHorasDormir(horaDespertar, minDespertar)
 
     if (showTimePicker) {
@@ -75,10 +77,10 @@ fun RimuSuenoScreen(
             onDismissRequest = { showTimePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    horaDespertar = timePickerState.hour
-                    minDespertar  = timePickerState.minute
+                    horaDespertar       = timePickerState.hour
+                    minDespertar        = timePickerState.minute
                     bedtimeSeleccionado = null
-                    showTimePicker = false
+                    showTimePicker      = false
                 }) { Text("OK", color = Color(0xFF4CAF50)) }
             },
             dismissButton = {
@@ -88,9 +90,9 @@ fun RimuSuenoScreen(
             },
             containerColor = Color(0xFF1A1A1A),
             text = {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     TimePicker(
-                        state = timePickerState,
+                        state  = timePickerState,
                         colors = TimePickerDefaults.colors(
                             clockDialColor = Color(0xFF2A2A2A),
                             selectorColor  = Color(0xFF4CAF50),
@@ -108,7 +110,7 @@ fun RimuSuenoScreen(
             .background(DeepBackground)
             .padding(horizontal = 24.dp)
     ) {
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(Modifier.height(48.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { navController.popBackStack() }) {
@@ -120,9 +122,9 @@ fun RimuSuenoScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(Modifier.height(32.dp))
 
-        // Banner de notificación activa
+        // ── Banner notif activa ────────────────────────────────────────────────
         if (notifProgramada && notifHoraGuardada >= 0) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -136,35 +138,52 @@ fun RimuSuenoScreen(
                     verticalAlignment     = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text(
-                            "🔔 Notificación programada",
-                            color = Color(0xFF4CAF50), fontSize = 13.sp, fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "Aviso a las %02d:%02d".format(notifHoraGuardada, notifMinGuardado),
-                            color = SecondaryText, fontSize = 11.sp
-                        )
+                        Text("🔔 Notificación programada", color = Color(0xFF4CAF50), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text("Aviso a las %02d:%02d".format(notifHoraGuardada, notifMinGuardado), color = SecondaryText, fontSize = 11.sp)
                     }
                     TextButton(onClick = {
-                        prefs.edit()
-                            .putBoolean(KEY_NOTIF_SET, false)
-                            .putLong(KEY_NOTIF_MILLIS, -1L)
-                            .apply()
-                        notifProgramada     = false
-                        notifHoraGuardada   = -1
-                        notifMinGuardado    = -1
-                        notifMillisGuardado = -1L
+                        prefs.edit().putBoolean(KEY_NOTIF_SET, false).putLong(KEY_NOTIF_MILLIS, -1L).apply()
+                        notifProgramada = false; notifHoraGuardada = -1; notifMinGuardado = -1; notifMillisGuardado = -1L
                     }) {
                         Text("CANCELAR", color = Color(0xFFFF4444), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(Modifier.height(12.dp))
         }
 
-        // Selector de hora de despertar
+        // ── Banner blackout programado ─────────────────────────────────────────
+        if (blackoutProgramado) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color    = Color(0xFF9C27B0).copy(0.08f),
+                shape    = RoundedCornerShape(14.dp),
+                border   = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9C27B0).copy(0.35f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("🌑 Modo Blackout programado", color = Color(0xFF9C27B0), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text("Se activará automáticamente a la hora de dormir", color = SecondaryText, fontSize = 11.sp)
+                    }
+                    TextButton(onClick = {
+                        prefs.edit().putBoolean(KEY_BLACKOUT_SET, false).apply()
+                        blackoutProgramado = false
+                        viewModel.desactivarBlackout(context)
+                    }) {
+                        Text("CANCELAR", color = Color(0xFFFF4444), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+
+        // ── Selector hora de despertar ─────────────────────────────────────────
         Text("¿A QUÉ HORA NECESITAS DESPERTAR?", color = SecondaryText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(Modifier.height(12.dp))
 
         Surface(
             modifier = Modifier.fillMaxWidth().clickable { showTimePicker = true },
@@ -177,18 +196,14 @@ fun RimuSuenoScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment     = Alignment.CenterVertically
             ) {
-                Text(
-                    "%02d:%02d".format(horaDespertar, minDespertar),
-                    color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Black
-                )
+                Text("%02d:%02d".format(horaDespertar, minDespertar), color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Black)
                 Text("CAMBIAR", color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
-
+        Spacer(Modifier.height(32.dp))
         Text("MEJORES HORARIOS PARA DORMIR", color = SecondaryText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(Modifier.height(12.dp))
 
         opciones.forEachIndexed { idx, (h, m, ciclos) ->
             val isSelected = bedtimeSeleccionado == Triple(h, m, ciclos)
@@ -197,7 +212,6 @@ fun RimuSuenoScreen(
                 1    -> "✅ BUENO"  to Color(0xFFFFD700)
                 else -> "⚡ MÍNIMO" to SecondaryText
             }
-
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -215,75 +229,113 @@ fun RimuSuenoScreen(
                     verticalAlignment     = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text(
-                            "%02d:%02d".format(h, m),
-                            color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black
-                        )
-                        Text(
-                            "$ciclos ciclos · ${ciclos * 90 / 60}h ${(ciclos * 90) % 60}min de sueño",
-                            color = SecondaryText, fontSize = 12.sp
-                        )
+                        Text("%02d:%02d".format(h, m), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                        Text("$ciclos ciclos · ${ciclos * 90 / 60}h ${(ciclos * 90) % 60}min", color = SecondaryText, fontSize = 12.sp)
                     }
                     Surface(
                         color  = accentColor.copy(0.1f),
                         shape  = RoundedCornerShape(8.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(0.4f))
                     ) {
+                        Text(etiqueta, color = accentColor, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                    }
+                }
+            }
+        }
+
+        // ── Botones de acción ──────────────────────────────────────────────────
+        bedtimeSeleccionado?.let { (h, m, _) ->
+            Spacer(Modifier.height(24.dp))
+
+            val totalMinBed   = h * 60 + m
+            val totalMinNotif = (totalMinBed - 60 + 24 * 60) % (24 * 60)
+            val notifH        = totalMinNotif / 60
+            val notifM        = totalMinNotif % 60
+            val notifMillis   = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, notifH)
+                set(Calendar.MINUTE, notifM)
+                set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+                if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
+            }.timeInMillis
+
+            // Notificación
+            if (!notifProgramada) {
+                Button(
+                    onClick = {
+                        viewModel.programarNotificacionSueno(h, m)
+                        prefs.edit()
+                            .putBoolean(KEY_NOTIF_SET, true).putInt(KEY_NOTIF_HORA, notifH)
+                            .putInt(KEY_NOTIF_MIN, notifM).putLong(KEY_NOTIF_MILLIS, notifMillis)
+                            .apply()
+                        notifProgramada = true; notifHoraGuardada = notifH
+                        notifMinGuardado = notifM; notifMillisGuardado = notifMillis
+                    },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                    shape    = RoundedCornerShape(14.dp)
+                ) {
+                    Text("🔔 AVÍSAME A LAS %02d:%02d".format(notifH, notifM), color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, fontSize = 14.sp)
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+
+            // Blackout — verificar permiso primero
+            if (!blackoutProgramado) {
+                if (!tienePermisoOverlay) {
+                    // Invitar a conceder permiso
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color    = Color(0xFF9C27B0).copy(0.06f),
+                        shape    = RoundedCornerShape(14.dp),
+                        border   = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9C27B0).copy(0.3f))
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text("🌑 Modo Blackout", color = Color(0xFF9C27B0), fontSize = 14.sp, fontWeight = FontWeight.Black)
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                "Para activar el overlay de emergencia necesitás conceder el permiso de mostrar sobre otras apps.",
+                                color = SecondaryText, fontSize = 12.sp, lineHeight = 18.sp
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    val intent = Intent(
+                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                        Uri.parse("package:${context.packageName}")
+                                    )
+                                    context.startActivity(intent)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape    = RoundedCornerShape(10.dp),
+                                colors   = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF9C27B0))
+                            ) {
+                                Text("CONCEDER PERMISO DE OVERLAY")
+                            }
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            viewModel.programarBlackoutParaDormir(h, m)
+                            prefs.edit().putBoolean(KEY_BLACKOUT_SET, true).apply()
+                            blackoutProgramado = true
+                        },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0)),
+                        shape    = RoundedCornerShape(14.dp)
+                    ) {
                         Text(
-                            etiqueta, color = accentColor, fontSize = 10.sp, fontWeight = FontWeight.Black,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            "🌑 ACTIVAR BLACKOUT A LAS %02d:%02d".format(h, m),
+                            color      = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            textAlign  = TextAlign.Center,
+                            fontSize   = 14.sp
                         )
                     }
                 }
             }
         }
 
-        // Botón de programar notificación
-        bedtimeSeleccionado?.let { (h, m, _) ->
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Calcula la hora de la notificación (60 min antes de la hora de dormir)
-            val totalMinBed   = h * 60 + m
-            val totalMinNotif = (totalMinBed - 60 + 24 * 60) % (24 * 60)
-            val notifH        = totalMinNotif / 60
-            val notifM        = totalMinNotif % 60
-
-            // Millis exacto de cuando debe dispararse la notificación
-            val notifMillis = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, notifH)
-                set(Calendar.MINUTE, notifM)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-                // Si ya pasó hoy, programar para mañana
-                if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
-            }.timeInMillis
-
-            if (!notifProgramada) {
-                Button(
-                    onClick = {
-                        viewModel.programarNotificacionSueno(h, m)
-                        prefs.edit()
-                            .putBoolean(KEY_NOTIF_SET, true)
-                            .putInt(KEY_NOTIF_HORA, notifH)
-                            .putInt(KEY_NOTIF_MIN, notifM)
-                            .putLong(KEY_NOTIF_MILLIS, notifMillis)
-                            .apply()
-                        notifProgramada     = true
-                        notifHoraGuardada   = notifH
-                        notifMinGuardado    = notifM
-                        notifMillisGuardado = notifMillis
-                    },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                    shape    = RoundedCornerShape(14.dp)
-                ) {
-                    Text(
-                        "🔔 AVÍSAME A LAS %02d:%02d".format(notifH, notifM),
-                        color = Color.White, fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center, fontSize = 14.sp
-                    )
-                }
-            }
-        }
+        Spacer(Modifier.height(32.dp))
     }
 }
